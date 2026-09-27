@@ -6,13 +6,13 @@ import type {
   SkillSpec,
   ScoreResult,
   AssumptionSource,
+  LiveStatus,
 } from '@/engine/types';
 import { generateTrip, SAMPLE_RATE } from '@/engine/signalGen';
 import { runScoring } from '@/engine/scoring';
 import { DEFAULT_SKILLS, ASSUMPTION_PROFILES } from '@/engine/defaults';
 import { parseCsv, type CsvParseResult } from '@/engine/csv';
 import { requestMotionPermission, LiveRecorder, processLiveSamples } from '@/engine/liveCapture';
-import type { LiveStatus } from '@/engine/types';
 
 interface StoreValue {
   dataSource: DataSource;
@@ -69,17 +69,28 @@ function applyProfileMultipliers(profileId: string, skills: SkillSpec[]): SkillS
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
+  // ---- core state ----
   const [dataSource, setDataSource] = useState<DataSource>('simulator');
   const [simulatorParams, setSimulatorParams] = useState<SimulatorParams>(DEFAULT_SIM_PARAMS);
   const [csvError, setCsvError] = useState<string | null>(null);
   const [csvFileName, setCsvFileName] = useState<string | null>(null);
+  const [csvSamples, setCsvSamples] = useState<TelemetrySample[]>([]);
   const [skills, setSkills] = useState<SkillSpec[]>(() =>
     applyProfileMultipliers('standard', DEFAULT_SKILLS),
   );
   const [activeProfileId, setActiveProfileId] = useState<string>('standard');
   const [loading, setLoading] = useState(false);
 
-  // Generate / store samples
+  // ---- live trip state ----
+  const [liveStatus, setLiveStatus] = useState<LiveStatus>('idle');
+  const [liveError, setLiveError] = useState<string | null>(null);
+  const [liveDurationSec, setLiveDurationSec] = useState<number>(60);
+  const [liveRemainingSec, setLiveRemainingSec] = useState<number>(60);
+  const [liveSamples, setLiveSamples] = useState<TelemetrySample[]>([]);
+  const liveRecorderRef = useRef<LiveRecorder | null>(null);
+  const liveTimerRef = useRef<number | null>(null);
+
+  // ---- derived data ----
   const samples: TelemetrySample[] = useMemo(() => {
     if (dataSource === 'simulator') {
       return generateTrip(simulatorParams);
@@ -87,16 +98,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return [];
   }, [dataSource, simulatorParams]);
 
-  // Upload CSV — stored in a ref-like state
-  const [csvSamples, setCsvSamples] = useState<TelemetrySample[]>([]);
-
-    const effectiveSamples = dataSource === 'csv' ? csvSamples : dataSource === 'live' ? liveSamples : samples;
+  const effectiveSamples =
+    dataSource === 'csv' ? csvSamples : dataSource === 'live' ? liveSamples : samples;
 
   const scoreResult = useMemo(() => {
     if (effectiveSamples.length === 0) return null;
     return runScoring(effectiveSamples, skills);
   }, [effectiveSamples, skills]);
 
+  // ---- simulator / csv actions ----
   const setSimulatorParam = useCallback((key: keyof SimulatorParams, value: number) => {
     setSimulatorParams((prev) => ({ ...prev, [key]: value }));
   }, []);
@@ -115,14 +125,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setDataSource('csv');
       setCsvFileName(fileName);
     }
-      const [liveStatus, setLiveStatus] = useState<LiveStatus>('idle');
-  const [liveError, setLiveError] = useState<string | null>(null);
-  const [liveDurationSec, setLiveDurationSec] = useState<number>(60);
-  const [liveRemainingSec, setLiveRemainingSec] = useState<number>(60);
-  const [liveSamples, setLiveSamples] = useState<TelemetrySample[]>([]);
-  const liveRecorderRef = useRef<LiveRecorder | null>(null);
-  const liveTimerRef = useRef<number | null>(null);
+    setLoading(false);
+    return result;
+  }, []);
 
+  const switchToSimulator = useCallback(() => {
+    setDataSource('simulator');
+    setCsvError(null);
+    setCsvFileName(null);
+  }, []);
+
+  const switchToCsvView = useCallback(() => {
+    setDataSource('csv');
+  }, []);
+
+  // ---- live trip actions ----
   const switchToLiveView = useCallback(() => {
     setDataSource('live');
     setLiveStatus('idle');
@@ -174,20 +191,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
     }, 200);
   }, [liveDurationSec, stopLiveRecording]);
-    setLoading(false);
-    return result;
-  }, []);
 
-  const switchToSimulator = useCallback(() => {
-    setDataSource('simulator');
-    setCsvError(null);
-    setCsvFileName(null);
-  }, []);
-
-    const switchToCsvView = useCallback(() => {
-    setDataSource('csv');
-  }, []);
-
+  // ---- assumptions lab actions ----
   const updateThreshold = useCallback(
     (skillId: string, featureKey: string, thresholdType: 'good' | 'bad', value: number) => {
       setSkills((prev) =>
@@ -270,7 +275,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setLiveDurationSec,
     startLiveRecording,
     stopLiveRecording,
-    switchToLiveView
+    switchToLiveView,
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
