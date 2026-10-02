@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import {
   LineChart as LineChartIcon, Eye, EyeOff, Gauge, Car,
-  Activity, Navigation, AlertTriangle,
+  Activity, Navigation, AlertTriangle, FileText,
 } from 'lucide-react';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -10,6 +10,8 @@ import {
 import { useStore } from '@/store';
 import { extractFeatures, SAMPLE_RATE } from '@/engine/scoring';
 import { PageHeader, EmptyState, LoadingState, ErrorState, Card } from '@/components/ui';
+import { TripReportModal } from '@/components/TripReportModal';
+import { getStoredDriverProfile } from '@/services/accountStorage';
 
 interface ChartToggle {
   id: string;
@@ -27,7 +29,8 @@ const CHARTS: ChartToggle[] = [
 ];
 
 export function TripAnalysisPage() {
-  const { samples, loading, dataSource, csvError } = useStore();
+  const { samples, loading, dataSource, csvError, scoreResult } = useStore();
+  const [showReportModal, setShowReportModal] = useState(false);
   const [visibleCharts, setVisibleCharts] = useState<Record<string, boolean>>({
     speed: true,
     a_long: true,
@@ -79,7 +82,19 @@ export function TripAnalysisPage() {
       <PageHeader
         title="Trip Analysis"
         subtitle="Synchronised telemetry charts from the current trip data"
-      />
+      >
+        {scoreResult && (
+          <div className="mt-3">
+            <button
+              onClick={() => setShowReportModal(true)}
+              className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Export PDF Report</span>
+            </button>
+          </div>
+        )}
+      </PageHeader>
 
       {/* Chart toggles */}
       <div className="flex flex-wrap gap-2 mb-4">
@@ -238,6 +253,17 @@ export function TripAnalysisPage() {
         <LineChartIcon className="w-4 h-4" />
         Signals are low-pass filtered at 3 Hz before display. Sample rate: {SAMPLE_RATE} Hz.
       </div>
+
+      {scoreResult && (
+        <TripReportModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          tripTitle="Trip Telemetry Analysis"
+          driverProfile={getStoredDriverProfile()}
+          scoreResult={scoreResult}
+          samples={samples}
+        />
+      )}
     </div>
   );
 }

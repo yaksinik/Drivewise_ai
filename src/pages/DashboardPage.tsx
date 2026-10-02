@@ -1,10 +1,19 @@
-import { Target, TrendingUp, AlertTriangle, Car } from 'lucide-react';
+import { useState } from 'react';
+import { Target, TrendingUp, AlertTriangle, Car, FileText, BookmarkPlus, Check } from 'lucide-react';
 import { useStore } from '@/store';
 import { SkillCard } from '@/components/SkillCard';
 import { PageHeader, EmptyState, LoadingState, ErrorState, Card } from '@/components/ui';
+import { TripReportModal } from '@/components/TripReportModal';
+import { getStoredDriverProfile } from '@/services/accountStorage';
 
 export function DashboardPage() {
-  const { scoreResult, loading, dataSource, csvError, samples } = useStore();
+  const { scoreResult, loading, dataSource, csvError, samples, saveCurrentTripToAccount } = useStore();
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [tripTitle, setTripTitle] = useState('Driving Session Assessment');
+  const [tripNotes, setTripNotes] = useState('');
+  const [tripTags, setTripTags] = useState('Research, Test');
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   if (loading) return <LoadingState />;
 
@@ -17,7 +26,7 @@ export function DashboardPage() {
       <EmptyState
         icon={Car}
         title="No trip data yet"
-        message="Upload a CSV file with telemetry columns (time_s, a_long, a_lat, yaw_rate, speed) to see your driving scores."
+        message="Upload a CSV file with telemetry columns (time_s, a_long, a_lat, yaw_rate, speed) or start a Live Phone Sensor trip to see your driving scores."
       />
     );
   }
@@ -61,12 +70,45 @@ export function DashboardPage() {
 
   const { skills, overall, nextFocus } = scoreResult;
 
+  const handleSaveTrip = (e: React.FormEvent) => {
+    e.preventDefault();
+    const tags = tripTags.split(',').map((t) => t.trim()).filter(Boolean);
+    saveCurrentTripToAccount(tripTitle, tripNotes, tags);
+    setShowSaveModal(false);
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3000);
+  };
+
   return (
     <div>
       <PageHeader
         title="Dashboard"
         subtitle="Your five motor-skill scores, based on the current trip data"
-      />
+      >
+        <div className="mt-3 flex items-center gap-3 flex-wrap">
+          <button
+            onClick={() => setShowReportModal(true)}
+            className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+          >
+            <FileText className="w-4 h-4" />
+            <span>Export PDF Report</span>
+          </button>
+
+          <button
+            onClick={() => setShowSaveModal(true)}
+            className="px-4 py-2 rounded-xl border border-violet-200 text-violet-700 hover:bg-violet-50 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer bg-white"
+          >
+            <BookmarkPlus className="w-4 h-4" />
+            <span>Save Trip to Account</span>
+          </button>
+
+          {saveSuccess && (
+            <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1 animate-fade-in">
+              <Check className="w-4 h-4" /> Saved to Driver History!
+            </span>
+          )}
+        </div>
+      </PageHeader>
 
       {/* Overall summary */}
       <Card className="mb-6 bg-gradient-to-br from-violet-600 to-violet-800 border-violet-700">
@@ -118,8 +160,81 @@ export function DashboardPage() {
       {/* Supportive note */}
       <div className="mt-6 flex items-center gap-2 text-sm text-violet-400">
         <TrendingUp className="w-4 h-4" />
-        Scores update instantly as you adjust the simulator sliders or thresholds.
+        Scores update instantly as you adjust the simulator sliders, upload CSV files, or record live trips.
       </div>
+
+      {/* PDF Report Modal */}
+      <TripReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        tripTitle={tripTitle}
+        driverProfile={getStoredDriverProfile()}
+        scoreResult={scoreResult}
+        samples={samples}
+      />
+
+      {/* Save Trip Modal */}
+      {showSaveModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <h3 className="font-bold text-lg text-slate-900">Save Trip to Driver Account</h3>
+            <p className="text-xs text-slate-500">
+              Preserve this session in your longitudinal study log to track skill development over time.
+            </p>
+
+            <form onSubmit={handleSaveTrip} className="space-y-3 text-xs">
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Session Title</label>
+                <input
+                  type="text"
+                  value={tripTitle}
+                  onChange={(e) => setTripTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Tags (comma separated)</label>
+                <input
+                  type="text"
+                  value={tripTags}
+                  onChange={(e) => setTripTags(e.target.value)}
+                  placeholder="e.g. Highway, Night, Heavy Traffic"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Notes / Route Context</label>
+                <textarea
+                  value={tripNotes}
+                  onChange={(e) => setTripNotes(e.target.value)}
+                  placeholder="e.g. Weather conditions, traffic density, vehicle behavior..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSaveModal(false)}
+                  className="px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-violet-600 text-white font-semibold rounded-xl hover:bg-violet-700 cursor-pointer"
+                >
+                  Confirm & Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

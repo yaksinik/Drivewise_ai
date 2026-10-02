@@ -12,7 +12,17 @@ import { generateTrip, SAMPLE_RATE } from '@/engine/signalGen';
 import { runScoring } from '@/engine/scoring';
 import { DEFAULT_SKILLS, ASSUMPTION_PROFILES } from '@/engine/defaults';
 import { parseCsv, type CsvParseResult } from '@/engine/csv';
-import { requestMotionPermission, LiveRecorder, processLiveSamples } from '@/engine/liveCapture';
+import {
+  requestMotionAndGpsPermission,
+  LiveRecorder,
+  processLiveSamples,
+  type LiveTelemetrySnapshot,
+} from '@/engine/liveCapture';
+import {
+  getStoredDriverProfile,
+  saveTripToStorage,
+  type SavedTripRecord,
+} from '@/services/accountStorage';
 
 interface StoreValue {
   dataSource: DataSource;
@@ -42,6 +52,9 @@ interface StoreValue {
   startLiveRecording: () => Promise<void>;
   stopLiveRecording: () => void;
   switchToLiveView: () => void;
+  liveSnapshot: LiveTelemetrySnapshot | null;
+  saveCurrentTripToAccount: (title?: string, notes?: string, tags?: string[]) => SavedTripRecord | null;
+  loadSavedTrip: (trip: SavedTripRecord) => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -61,8 +74,8 @@ function applyProfileMultipliers(profileId: string, skills: SkillSpec[]): SkillS
     ...s,
     features: s.features.map((f) => ({
       ...f,
-      goodThreshold: f.goodThreshold * profile.multipliers[s.id],
-      badThreshold: f.badThreshold * profile.multipliers[s.id],
+      goodThreshold: +(f.goodThreshold * profile.multipliers[s.id]).toFixed(2),
+      badThreshold: +(f.badThreshold * profile.multipliers[s.id]).toFixed(2),
       source: profileId === 'standard' ? f.source : ('Calibrated' as AssumptionSource),
     })),
   }));
@@ -87,6 +100,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [liveDurationSec, setLiveDurationSec] = useState<number>(60);
   const [liveRemainingSec, setLiveRemainingSec] = useState<number>(60);
   const [liveSamples, setLiveSamples] = useState<TelemetrySample[]>([]);
+  const [liveSnapshot, setLiveSnapshot] = useState<LiveTelemetrySnapshot | null>(null);
   const liveRecorderRef = useRef<LiveRecorder | null>(null);
   const liveTimerRef = useRef<number | null>(null);
 
@@ -144,6 +158,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setDataSource('live');
     setLiveStatus('idle');
     setLiveError(null);
+    setLiveSnapshot(null);
   }, []);
 
   const stopLiveRecording = useCallback(() => {
@@ -157,25 +172,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const raw = recorder.stop();
     const processed = processLiveSamples(raw);
     if (processed.length === 0) {
-      setLiveError('No usable motion data was recorded. Make sure sensor permission was granted and the phone stayed on during recording.');
+      setLiveError('No usable motion data was recorded. Make sure sensor permission was granted and the phone stayed active.');
       setLiveStatus('error');
+      setLiveSnapshot(null);
       return;
     }
     setLiveSamples(processed);
     setDataSource('live');
     setLiveStatus('done');
+    setLiveSnapshot(null);
   }, []);
 
   const startLiveRecording = useCallback(async () => {
     setLiveError(null);
     setLiveStatus('requesting-permission');
-    const perm = await requestMotionPermission();
+    const perm = await requestMotionAndGpsPermission();
     if (!perm.granted) {
-      setLiveError(perm.reason ?? 'Motion sensor permission was not granted.');
+      setLiveError(perm.reason ?? 'Motion sensor or location permission was not granted.');
       setLiveStatus('error');
       return;
     }
-    const recorder = new LiveRecorder();
+    const recorder = new LiveRecorder((snapshot) => {
+      setLiveSnapshot(snapshot);
+    });
     liveRecorderRef.current = recorder;
     recorder.start();
     setLiveStatus('recording');
@@ -191,6 +210,46 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
     }, 200);
   }, [liveDurationSec, stopLiveRecording]);
+
+  // ---- account & history actions ----
+  const saveCurrentTripToAccount = useCallback(
+    (title = 'Recorded Driving Session', notes = '', tags: string[] = ['Evaluation']): SavedTripRecord | null => {
+      if (!scoreResult || effectiveSamples.length === 0) return null;
+      const profile = getStoredDriverProfile();
+      const record: SavedTripRecord = {
+        id: `trip_${Date.now()}`,
+        driverId: profile.id,
+        title,
+        timestamp: new Date().toISOString(),
+        durationSeconds: effectiveSamples.length > 0 ? Math.round(effectiveSamples[effectiveSamples.length - 1].time_s) : 0,
+        sampleCount: effectiveSamples.length,
+        dataSource,
+        tags,
+        notes,
+        overallScore: scoreResult.overall,
+        dataQualityScore: scoreResult.dataQuality.score,
+        skills: scoreResult.skills.map((s) => ({
+          id: s.id,
+          label: s.label,
+          score: s.score,
+          status: s.status,
+        })),
+        harshBrakingCount: 0,
+        samples: effectiveSamples,
+        scoreResult,
+      };
+      saveTripToStorage(record);
+      return record;
+    },
+    [scoreResult, effectiveSamples, dataSource]
+  );
+
+  const loadSavedTrip = useCallback((trip: SavedTripRecord) => {
+    setDataSource('csv');
+    setCsvSamples(trip.samples);
+    setCsvFileName(`Historical: ${trip.title}`);
+    setCsvError(null);
+  }, []);
 
   // ---- assumptions lab actions ----
   const updateThreshold = useCallback(
@@ -225,8 +284,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const applyProfile = useCallback((profileId: string) => {
     setActiveProfileId(profileId);
-    setSkills((prev) => {
-      // Reset to defaults then apply multiplier — we need to use DEFAULT_SKILLS as base
+    setSkills(() => {
       return applyProfileMultipliers(profileId, DEFAULT_SKILLS);
     });
   }, []);
@@ -276,6 +334,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     startLiveRecording,
     stopLiveRecording,
     switchToLiveView,
+    liveSnapshot,
+    saveCurrentTripToAccount,
+    loadSavedTrip,
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

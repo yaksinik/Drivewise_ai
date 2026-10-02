@@ -1,7 +1,9 @@
-import { Upload, Sliders, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Upload, Sliders, AlertCircle, Smartphone, Navigation, QrCode, X, Radio, StopCircle } from 'lucide-react';
 import { useStore } from '@/store';
 import type { SimulatorParams } from '@/engine/types';
 import { generateSampleCsv } from '@/engine/csv';
+import { LiveTripHUD } from './LiveTripHUD';
 
 const SLIDER_CONFIG: { key: keyof SimulatorParams; label: string; description: string }[] = [
   { key: 'brakingHarshness', label: 'Braking harshness', description: 'How abrupt stops are' },
@@ -12,7 +14,7 @@ const SLIDER_CONFIG: { key: keyof SimulatorParams; label: string; description: s
 ];
 
 export function DataSourceControls() {
-    const {
+  const {
     dataSource,
     simulatorParams,
     setSimulatorParam,
@@ -27,9 +29,12 @@ export function DataSourceControls() {
     setLiveDurationSec,
     startLiveRecording,
     stopLiveRecording,
+    liveSnapshot,
     csvError,
     csvFileName,
   } = useStore();
+
+  const [showPhoneHelp, setShowPhoneHelp] = useState(false);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -55,16 +60,28 @@ export function DataSourceControls() {
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-violet-100 p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <Sliders className="w-5 h-5 text-violet-600" />
-        <h3 className="font-semibold text-violet-950">Data Source</h3>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Sliders className="w-5 h-5 text-violet-600" />
+          <h3 className="font-semibold text-violet-950">Data Source</h3>
+        </div>
+
+        {dataSource === 'live' && (
+          <button
+            onClick={() => setShowPhoneHelp(true)}
+            className="p-1 rounded-lg text-violet-600 hover:bg-violet-50 transition-colors cursor-pointer"
+            title="How to connect phone in-car"
+          >
+            <Smartphone className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Toggle buttons */}
-            <div className="flex gap-2 mb-4 p-1 bg-violet-50 rounded-xl">
+      <div className="flex gap-2 mb-4 p-1 bg-violet-50 rounded-xl">
         <button
           onClick={switchToSimulator}
-          className={`flex-1 py-2 px-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+          className={`flex-1 py-2 px-2 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer ${
             dataSource === 'simulator' ? 'bg-white text-violet-700 shadow-sm' : 'text-violet-400 hover:text-violet-600'
           }`}
         >
@@ -72,7 +89,7 @@ export function DataSourceControls() {
         </button>
         <button
           onClick={switchToCsvView}
-          className={`flex-1 py-2 px-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+          className={`flex-1 py-2 px-2 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer ${
             dataSource === 'csv' ? 'bg-white text-violet-700 shadow-sm' : 'text-violet-400 hover:text-violet-600'
           }`}
         >
@@ -80,7 +97,7 @@ export function DataSourceControls() {
         </button>
         <button
           onClick={switchToLiveView}
-          className={`flex-1 py-2 px-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+          className={`flex-1 py-2 px-2 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer ${
             dataSource === 'live' ? 'bg-white text-violet-700 shadow-sm' : 'text-violet-400 hover:text-violet-600'
           }`}
         >
@@ -148,78 +165,110 @@ export function DataSourceControls() {
           )}
           <button
             onClick={handleDownloadSample}
-            className="text-sm text-violet-500 hover:text-violet-700 underline"
+            className="text-sm text-violet-500 hover:text-violet-700 underline cursor-pointer"
           >
             Download a sample CSV template
           </button>
         </div>
       )}
-            {dataSource === 'live' && (
+
+      {dataSource === 'live' && (
         <div className="space-y-4">
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
-            <strong>Prototype notice:</strong> this uses your phone's real motion sensors (no GPS yet), so
-            Speed Consistency won't be meaningful for a live-recorded trip — the Data Quality check will
-            flag this automatically. Hold the phone still for the first 2 seconds after pressing Start.
+          <div className="bg-violet-50 border border-violet-200 rounded-xl p-3 text-xs text-violet-900 flex items-start gap-2">
+            <Navigation className="w-4 h-4 text-violet-600 shrink-0 mt-0.5" />
+            <div>
+              <strong>GPS + Inertial Sensor Fusion Active:</strong> Mount phone securely in car holder.
+              Keep vehicle still for the first 2 seconds after starting to calibrate zero-g gravity offset.
+            </div>
           </div>
 
+          {/* Duration selector — always visible when not mid-recording */}
+          {liveStatus !== 'recording' && liveStatus !== 'requesting-permission' && liveStatus !== 'processing' && (
+            <div>
+              <label className="text-sm font-medium text-violet-800 block mb-1">
+                Recording duration
+              </label>
+              <select
+                value={liveDurationSec}
+                onChange={(e) => setLiveDurationSec(parseInt(e.target.value))}
+                className="w-full px-3 py-2 rounded-lg border border-violet-200 text-sm text-violet-800 bg-white"
+              >
+                <option value={30}>30 seconds</option>
+                <option value={60}>1 minute</option>
+                <option value={180}>3 minutes</option>
+                <option value={300}>5 minutes</option>
+                <option value={600}>10 minutes</option>
+              </select>
+              <p className="text-xs text-violet-400 mt-1">
+                Recording stops automatically at this time, or click Stop anytime.
+              </p>
+            </div>
+          )}
+
+          {/* Start / Stop button pair */}
           {(liveStatus === 'idle' || liveStatus === 'error' || liveStatus === 'done') && (
-            <>
-              <div>
-                <label className="text-sm font-medium text-violet-800 block mb-1">
-                  Recording duration
-                </label>
-                <select
-                  value={liveDurationSec}
-                  onChange={(e) => setLiveDurationSec(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 rounded-lg border border-violet-200 text-sm text-violet-800 bg-white"
-                >
-                  <option value={30}>30 seconds</option>
-                  <option value={60}>1 minute</option>
-                  <option value={180}>3 minutes</option>
-                  <option value={300}>5 minutes</option>
-                </select>
-                <p className="text-xs text-violet-400 mt-1">
-                  Recording stops automatically at this time, even if you forget or get interrupted.
-                </p>
-              </div>
+            <div className="flex gap-3">
               <button
                 onClick={startLiveRecording}
-                className="w-full py-4 rounded-xl bg-violet-600 text-white font-bold text-lg hover:bg-violet-700 transition-colors"
+                className="flex-1 py-4 rounded-xl bg-violet-600 text-white font-bold text-base hover:bg-violet-700 active:scale-95 transition-all cursor-pointer shadow-md hover:shadow-violet-500/20 flex items-center justify-center gap-2"
               >
-                ▶ Start Recording
+                <span className="text-lg">▶</span> Start In-Car Recording
               </button>
-            </>
+              <button
+                disabled
+                className="px-5 py-4 rounded-xl bg-slate-100 text-slate-400 font-semibold text-sm flex items-center gap-2 cursor-not-allowed select-none"
+                title="Start a recording first"
+              >
+                <StopCircle className="w-5 h-5" /> Stop
+              </button>
+            </div>
           )}
 
           {liveStatus === 'requesting-permission' && (
-            <div className="text-center py-6 text-violet-600 text-sm">
-              Requesting motion sensor permission — check for a browser prompt…
+            <div className="text-center py-6 text-violet-600 text-sm animate-pulse">
+              Requesting Motion & GPS permissions — check browser prompt…
             </div>
           )}
 
           {liveStatus === 'recording' && (
-            <div className="text-center py-4">
-              <div className="text-4xl font-bold text-violet-700 tabular-nums mb-2">
-                {Math.ceil(liveRemainingSec)}s
+            <div className="space-y-3">
+              {/* Active Start / Stop controls above the HUD */}
+              <div className="flex gap-3">
+                <button
+                  disabled
+                  className="flex-1 py-3 rounded-xl bg-violet-200 text-violet-400 font-bold text-base cursor-not-allowed select-none flex items-center justify-center gap-2"
+                >
+                  <span>▶</span> Recording…
+                </button>
+                <button
+                  onClick={stopLiveRecording}
+                  className="px-6 py-3 rounded-xl bg-red-600 hover:bg-red-700 active:scale-95 text-white font-semibold text-sm flex items-center gap-2 shadow-lg hover:shadow-red-600/30 transition-all cursor-pointer"
+                >
+                  <StopCircle className="w-5 h-5" /> Stop
+                </button>
               </div>
-              <p className="text-xs text-violet-500 mb-4">Recording… mount the phone and drive normally.</p>
-              <button
-                onClick={stopLiveRecording}
-                className="w-full py-3 rounded-xl bg-red-100 text-red-700 font-semibold hover:bg-red-200 transition-colors"
-              >
-                ■ Stop Now
-              </button>
+
+              <LiveTripHUD
+                snapshot={liveSnapshot}
+                remainingSec={liveRemainingSec}
+                durationSec={liveDurationSec}
+                onStop={stopLiveRecording}
+              />
             </div>
           )}
 
           {liveStatus === 'processing' && (
-            <div className="text-center py-6 text-violet-600 text-sm">Processing recording…</div>
+            <div className="text-center py-6 text-violet-600 text-sm">
+              <div className="w-5 h-5 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin mx-auto mb-2" />
+              Processing GPS and inertial fusion at 10 Hz…
+            </div>
           )}
 
           {liveStatus === 'done' && !liveError && (
-            <p className="text-sm text-green-600 bg-green-50 rounded-lg p-2">
-              Trip recorded and scored — check the Dashboard.
-            </p>
+            <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-xs text-green-800 space-y-1">
+              <p className="font-semibold text-green-900">Trip recorded and scored!</p>
+              <p>Check the Dashboard and Trip Analysis for detailed telemetry curves.</p>
+            </div>
           )}
 
           {liveError && (
@@ -228,6 +277,59 @@ export function DataSourceControls() {
               <span>{liveError}</span>
             </div>
           )}
+        </div>
+      )}
+
+      {/* In-Car Phone Connect Modal */}
+      {showPhoneHelp && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-5 h-5 text-violet-600" />
+                <h3 className="font-bold text-slate-900">Connect Real Phone in Car</h3>
+              </div>
+              <button
+                onClick={() => setShowPhoneHelp(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-600">
+              <div className="p-3 bg-violet-50 rounded-xl text-violet-900">
+                <strong>How to test live in your car:</strong>
+              </div>
+
+              <ol className="list-decimal list-inside space-y-2 leading-relaxed">
+                <li>
+                  Run the dev server with network host enabled:
+                  <code className="block my-1 p-2 bg-slate-900 text-violet-300 rounded font-mono text-[11px]">
+                    npm run dev -- --host
+                  </code>
+                </li>
+                <li>
+                  Connect your phone to the same Wi-Fi (or phone hotspot). Open Safari (iOS) or Chrome (Android) and navigate to your computer's local IP address (e.g. <span className="font-mono text-violet-700">http://192.168.1.X:5173</span>).
+                </li>
+                <li>
+                  Mount your smartphone firmly in your car's windshield/vent phone holder (screen facing you, top of phone facing forward).
+                </li>
+                <li>
+                  Tap <strong>"Start In-Car Recording"</strong> and grant motion & location permissions when prompted.
+                </li>
+              </ol>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={() => setShowPhoneHelp(false)}
+                className="w-full py-2.5 bg-violet-600 text-white font-semibold rounded-xl text-xs hover:bg-violet-700 cursor-pointer"
+              >
+                Got It
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

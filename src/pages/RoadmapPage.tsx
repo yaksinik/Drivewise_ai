@@ -1,5 +1,5 @@
 import {
-  Map, Smartphone, ClipboardList, Users, FileDown, Bot, Clock,
+  Map, Smartphone, ClipboardList, Users, FileDown, Bot, CheckCircle2, Clock,
 } from 'lucide-react';
 import { PageHeader, Card } from '@/components/ui';
 
@@ -7,33 +7,39 @@ interface RoadmapItem {
   title: string;
   description: string;
   icon: typeof Smartphone;
+  status: 'Implemented' | 'Planned';
 }
 
 const ROADMAP: RoadmapItem[] = [
   {
-    title: 'Live phone sensors',
-    description: 'Connect real phone accelerometer, gyroscope, and GPS data for live in-car scoring.',
+    title: 'Live phone sensors & GPS fusion',
+    description: 'Real-time accelerometer, gyroscope, and GPS speed capture for in-car scoring, friction circle, and Live HUD.',
     icon: Smartphone,
+    status: 'Implemented',
   },
   {
-    title: 'Instructor ratings study',
-    description: 'Collect parallel ratings from professional driving instructors to validate and calibrate scores.',
+    title: 'Instructor ratings study & calibration',
+    description: 'UI and statistical engine built (Pearson r, MAE, bias, auto-calibration). No real instructor ratings collected yet — data collection is Stage 2.',
     icon: ClipboardList,
+    status: 'Planned',
   },
   {
-    title: 'User accounts',
-    description: 'Let drivers save trips, track progress over time, and review their history.',
+    title: 'User accounts & longitudinal history',
+    description: 'localStorage profile, trip saving, and progression chart infrastructure built. No server auth or real multi-session data collected yet.',
     icon: Users,
+    status: 'Planned',
   },
   {
-    title: 'Report export',
-    description: 'Export trip analysis and skill summaries as PDF for sharing with instructors or coaches.',
+    title: 'Report export & PDF generation',
+    description: 'Official telematics performance reports with 5-skill audits, examiner sign-offs, and printable PDF vector rendering.',
     icon: FileDown,
+    status: 'Implemented',
   },
   {
-    title: 'AI coach',
-    description: 'Personalised, natural-language coaching recommendations based on each driver\'s patterns.',
+    title: 'AI coach & natural-language feedback',
+    description: 'Personalised, adaptive coaching recommendations based on individual telemetry pattern clustering.',
     icon: Bot,
+    status: 'Planned',
   },
 ];
 
@@ -41,26 +47,34 @@ export function RoadmapPage() {
   return (
     <div>
       <PageHeader
-        title="Roadmap"
-        subtitle="What's planned for Stage 2 — all items are future work"
+        title="Roadmap & Research Milestones"
+        subtitle="Tracking the development and empirical validation stages of DriveWise AI"
       />
 
       <div className="space-y-3">
         {ROADMAP.map((item, i) => {
           const Icon = item.icon;
+          const isDone = item.status === 'Implemented';
           return (
-            <Card key={i}>
+            <Card key={i} className={isDone ? 'border-violet-200 bg-white' : ''}>
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-violet-50 flex items-center justify-center shrink-0">
-                  <Icon className="w-6 h-6 text-violet-600" />
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isDone ? 'bg-emerald-50 text-emerald-600' : 'bg-violet-50 text-violet-600'}`}>
+                  <Icon className="w-6 h-6" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-semibold text-violet-950">{item.title}</h3>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                      <Clock className="w-3.5 h-3.5" />
-                      Planned
-                    </span>
+                    {isDone ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Implemented
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                        <Clock className="w-3.5 h-3.5" />
+                        Planned
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-violet-600 mt-1">{item.description}</p>
                 </div>
@@ -70,15 +84,17 @@ export function RoadmapPage() {
         })}
       </div>
 
-      <Card className="mt-6 bg-violet-50 border-violet-200">
+      <Card className="mt-6 bg-amber-50 border-amber-200">
         <div className="flex items-start gap-3">
-          <Map className="w-5 h-5 text-violet-600 shrink-0 mt-0.5" />
+          <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
           <div>
-            <h3 className="font-semibold text-violet-900">Stage 1 scope</h3>
-            <p className="text-sm text-violet-600 mt-1">
-              This prototype covers Stage 1 only: a front-end demonstration of the scoring
-              approach and assumption transparency. Everything listed above is Stage 2 work
-              and has not been started.
+            <h3 className="font-semibold text-amber-900">Research Paper Readiness</h3>
+            <p className="text-sm text-amber-800 mt-1">
+              The scoring engine, DSP pipeline, and PDF report export are fully implemented.
+              Live phone sensors, the instructor validation study UI, and the user account
+              infrastructure are built — but <strong>no real data has been collected yet</strong>.
+              Instructor ratings, user account histories, and live sensor sessions are all
+              Stage 2 data-collection milestones.
             </p>
           </div>
         </div>

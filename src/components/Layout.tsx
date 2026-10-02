@@ -1,12 +1,12 @@
 import { useState, type ReactNode } from 'react';
 import {
   LayoutDashboard, LineChart, FlaskConical, Cpu, Map, Car, Database,
-  AlertCircle, type LucideIcon,
+  AlertCircle, ClipboardCheck, UserCheck, type LucideIcon,
 } from 'lucide-react';
 import { useStore } from '@/store';
 import { DataSourceControls } from './DataSourceControls';
 
-export type PageId = 'dashboard' | 'trip' | 'assumptions' | 'dataset' | 'models' | 'roadmap';
+export type PageId = 'dashboard' | 'trip' | 'history' | 'instructor' | 'assumptions' | 'dataset' | 'models' | 'roadmap';
 
 interface NavItem {
   id: PageId;
@@ -17,6 +17,8 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'trip', label: 'Trip Analysis', icon: LineChart },
+  { id: 'history', label: 'Driver Account', icon: UserCheck },
+  { id: 'instructor', label: 'Instructor Study', icon: ClipboardCheck },
   { id: 'assumptions', label: 'Assumptions Lab', icon: FlaskConical },
   { id: 'dataset', label: 'Dataset Explorer', icon: Database },
   { id: 'models', label: 'Models & Methods', icon: Cpu },
