@@ -23,7 +23,7 @@ interface ChartToggle {
 }
 
 const CHARTS: ChartToggle[] = [
-  { id: 'speed', label: 'Speed', icon: Gauge, unit: 'm/s', color: '#7c3aed', dataKey: 'speed' },
+  { id: 'speed', label: 'Speed', icon: Gauge, unit: 'm/s', color: 'var(--signal)', dataKey: 'speed' },
   { id: 'a_long', label: 'Longitudinal acceleration', icon: Activity, unit: 'm/s²', color: '#2563eb', dataKey: 'a_long' },
   { id: 'a_lat', label: 'Lateral acceleration', icon: Navigation, unit: 'm/s²', color: '#059669', dataKey: 'a_lat' },
 ];
@@ -78,7 +78,7 @@ export function TripAnalysisPage() {
   const harshEvents = features?.harshBrakingEvents ?? [];
 
   return (
-    <div>
+    <div className="animate-fade-in">
       <PageHeader
         title="Trip Analysis"
         subtitle="Synchronised telemetry charts from the current trip data"
@@ -87,7 +87,7 @@ export function TripAnalysisPage() {
           <div className="mt-3">
             <button
               onClick={() => setShowReportModal(true)}
-              className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+              className="btn-primary"
             >
               <FileText className="w-4 h-4" />
               <span>Export PDF Report</span>
@@ -107,8 +107,8 @@ export function TripAnalysisPage() {
               onClick={() => toggleChart(chart.id)}
               className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                 visible
-                  ? 'bg-violet-600 text-white shadow-sm'
-                  : 'bg-white text-violet-500 border border-violet-200 hover:bg-violet-50'
+                  ? 'bg-[--signal] text-white shadow-sm'
+                  : 'bg-[--base] text-[--ink] border border-[--hairline] hover:bg-[--hairline]'
               }`}
             >
               {visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
@@ -125,28 +125,28 @@ export function TripAnalysisPage() {
         {visibleCharts.speed && (
           <Card>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-violet-950">Speed</h3>
-              <span className="text-xs text-violet-400">m/s vs time (s)</span>
+              <h3 className="font-semibold text-[--ink]">Speed</h3>
+              <span className="text-xs text-[--ink]/40 mono">m/s vs time (s)</span>
             </div>
             <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 20, left: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ede9fe" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--hairline)" />
                   <XAxis
                     dataKey="time_s"
-                    label={{ value: 'Time (s)', position: 'insideBottom', offset: -5, style: { fontSize: 12, fill: '#8b5cf6' } }}
-                    tick={{ fontSize: 11, fill: '#a78bfa' }}
+                    label={{ value: 'Time (s)', position: 'insideBottom', offset: -5, style: { fontSize: 12, fill: 'var(--ink)', opacity: 0.6 } }}
+                    tick={{ fontSize: 11, fill: 'var(--ink)', opacity: 0.5 }}
                   />
                   <YAxis
-                    label={{ value: 'Speed (m/s)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: '#8b5cf6' } }}
-                    tick={{ fontSize: 11, fill: '#a78bfa' }}
+                    label={{ value: 'Speed (m/s)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: 'var(--ink)', opacity: 0.6 } }}
+                    tick={{ fontSize: 11, fill: 'var(--ink)', opacity: 0.5 }}
                   />
                   <Tooltip
-                    contentStyle={{ borderRadius: 12, border: '1px solid #ede9fe', fontSize: 12 }}
+                    contentStyle={{ borderRadius: 8, border: '1px solid var(--hairline)', fontSize: 12, backgroundColor: 'var(--base)' }}
                     formatter={(v) => [`${Number(v).toFixed(2)} m/s`, 'Speed']}
                     labelFormatter={(l) => `t = ${l} s`}
                   />
-                  <Line type="monotone" dataKey="speed" stroke="#7c3aed" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="speed" stroke="var(--signal)" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -158,31 +158,31 @@ export function TripAnalysisPage() {
           <Card>
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h3 className="font-semibold text-violet-950">Longitudinal acceleration</h3>
+                <h3 className="font-semibold text-[--ink]">Longitudinal acceleration</h3>
                 {harshEvents.length > 0 && (
-                  <p className="text-xs text-orange-500 mt-0.5">
+                  <p className="text-xs text-[--caution] mt-0.5 mono">
                     {harshEvents.length} harsh braking event{harshEvents.length > 1 ? 's' : ''} detected
                     (decel &gt; 3 m/s²)
                   </p>
                 )}
               </div>
-              <span className="text-xs text-violet-400">m/s² vs time (s)</span>
+              <span className="text-xs text-[--ink]/40 mono">m/s² vs time (s)</span>
             </div>
             <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 20, left: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ede9fe" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--hairline)" />
                   <XAxis
                     dataKey="time_s"
-                    label={{ value: 'Time (s)', position: 'insideBottom', offset: -5, style: { fontSize: 12, fill: '#8b5cf6' } }}
-                    tick={{ fontSize: 11, fill: '#a78bfa' }}
+                    label={{ value: 'Time (s)', position: 'insideBottom', offset: -5, style: { fontSize: 12, fill: 'var(--ink)', opacity: 0.6 } }}
+                    tick={{ fontSize: 11, fill: 'var(--ink)', opacity: 0.5 }}
                   />
                   <YAxis
-                    label={{ value: 'a_long (m/s²)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: '#8b5cf6' } }}
-                    tick={{ fontSize: 11, fill: '#a78bfa' }}
+                    label={{ value: 'a_long (m/s²)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: 'var(--ink)', opacity: 0.6 } }}
+                    tick={{ fontSize: 11, fill: 'var(--ink)', opacity: 0.5 }}
                   />
                   <Tooltip
-                    contentStyle={{ borderRadius: 12, border: '1px solid #ede9fe', fontSize: 12 }}
+                    contentStyle={{ borderRadius: 8, border: '1px solid var(--hairline)', fontSize: 12, backgroundColor: 'var(--base)' }}
                     formatter={(v) => [`${Number(v).toFixed(2)} m/s²`, 'a_long']}
                     labelFormatter={(l) => `t = ${l} s`}
                   />
@@ -198,7 +198,7 @@ export function TripAnalysisPage() {
                         x={dataPoint.time_s}
                         y={dataPoint.a_long}
                         r={5}
-                        fill="#f97316"
+                        fill="var(--caution)"
                         stroke="#fff"
                         strokeWidth={1}
                       />
@@ -208,7 +208,7 @@ export function TripAnalysisPage() {
               </ResponsiveContainer>
             </div>
             {harshEvents.length > 0 && (
-              <div className="mt-3 flex items-center gap-2 text-xs text-orange-600">
+              <div className="mt-3 flex items-center gap-2 text-xs text-[--caution]">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 <span>Orange dots mark detected harsh braking events (deceleration &gt; 3 m/s²).</span>
               </div>
@@ -220,24 +220,24 @@ export function TripAnalysisPage() {
         {visibleCharts.a_lat && (
           <Card>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-violet-950">Lateral acceleration</h3>
-              <span className="text-xs text-violet-400">m/s² vs time (s)</span>
+              <h3 className="font-semibold text-[--ink]">Lateral acceleration</h3>
+              <span className="text-xs text-[--ink]/40 mono">m/s² vs time (s)</span>
             </div>
             <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 20, left: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ede9fe" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--hairline)" />
                   <XAxis
                     dataKey="time_s"
-                    label={{ value: 'Time (s)', position: 'insideBottom', offset: -5, style: { fontSize: 12, fill: '#8b5cf6' } }}
-                    tick={{ fontSize: 11, fill: '#a78bfa' }}
+                    label={{ value: 'Time (s)', position: 'insideBottom', offset: -5, style: { fontSize: 12, fill: 'var(--ink)', opacity: 0.6 } }}
+                    tick={{ fontSize: 11, fill: 'var(--ink)', opacity: 0.5 }}
                   />
                   <YAxis
-                    label={{ value: 'a_lat (m/s²)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: '#8b5cf6' } }}
-                    tick={{ fontSize: 11, fill: '#a78bfa' }}
+                    label={{ value: 'a_lat (m/s²)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: 'var(--ink)', opacity: 0.6 } }}
+                    tick={{ fontSize: 11, fill: 'var(--ink)', opacity: 0.5 }}
                   />
                   <Tooltip
-                    contentStyle={{ borderRadius: 12, border: '1px solid #ede9fe', fontSize: 12 }}
+                    contentStyle={{ borderRadius: 8, border: '1px solid var(--hairline)', fontSize: 12, backgroundColor: 'var(--base)' }}
                     formatter={(v) => [`${Number(v).toFixed(2)} m/s²`, 'a_lat']}
                     labelFormatter={(l) => `t = ${l} s`}
                   />
@@ -249,7 +249,7 @@ export function TripAnalysisPage() {
         )}
       </div>
 
-      <div className="mt-4 flex items-center gap-2 text-xs text-violet-400">
+      <div className="mt-4 flex items-center gap-2 text-xs text-[--ink]/40 mono">
         <LineChartIcon className="w-4 h-4" />
         Signals are low-pass filtered at 3 Hz before display. Sample rate: {SAMPLE_RATE} Hz.
       </div>

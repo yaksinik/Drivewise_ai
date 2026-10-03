@@ -29,6 +29,7 @@ export interface LiveTelemetrySnapshot {
   g_lat: number;  // G units (approx / 9.81)
   gpsAccuracy_m: number | null;
   gpsFix: boolean;
+  heading: number | null; // degrees from north
   sampleCount: number;
 }
 
@@ -171,6 +172,7 @@ export class LiveRecorder {
         g_lat: +(a_lat / 9.81).toFixed(2),
         gpsAccuracy_m: latestGps ? latestGps.accuracy_m : null,
         gpsFix: Boolean(latestGps && latestGps.accuracy_m < 50),
+        heading: latestGps ? latestGps.heading_deg : null,
         sampleCount: this.rawMotion.length,
       });
     }

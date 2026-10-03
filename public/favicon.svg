@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" fill="none">
+  <rect width="36" height="36" rx="9" fill="url(#grad)"/>
+  <defs>
+    <linearGradient id="grad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8b5cf6"/>
+      <stop offset="1" stop-color="#6d28d9"/>
+    </linearGradient>
+  </defs>
+  <!-- Car body -->
+  <rect x="6" y="19" width="24" height="8" rx="2.5" fill="white" opacity="0.95"/>
+  <!-- Cabin -->
+  <path d="M11 19 L13.5 13.5 Q14.5 12 16 12 H20 Q21.5 12 22.5 13.5 L25 19Z" fill="white" opacity="0.95"/>
+  <!-- Wheels -->
+  <circle cx="11" cy="27" r="3" fill="#6d28d9"/>
+  <circle cx="11" cy="27" r="1.4" fill="white"/>
+  <circle cx="25" cy="27" r="3" fill="#6d28d9"/>
+  <circle cx="25" cy="27" r="1.4" fill="white"/>
+  <!-- Window -->
+  <path d="M13.5 18.5 L15.5 14.5 Q16 13.5 17 13.5 H19 Q20 13.5 20.5 14.5 L22.5 18.5Z" fill="#a78bfa" opacity="0.8"/>
+</svg>

@@ -45,7 +45,7 @@ const ROADMAP: RoadmapItem[] = [
 
 export function RoadmapPage() {
   return (
-    <div>
+    <div className="animate-fade-in">
       <PageHeader
         title="Roadmap & Research Milestones"
         subtitle="Tracking the development and empirical validation stages of DriveWise AI"
@@ -56,7 +56,7 @@ export function RoadmapPage() {
           const Icon = item.icon;
           const isDone = item.status === 'Implemented';
           return (
-            <Card key={i} className={isDone ? 'border-violet-200 bg-white' : ''}>
+            <Card key={i} className={`transition-all duration-150 ${isDone ? 'border-violet-200 bg-white hover:border-violet-300 hover:shadow-md hover:shadow-violet-50' : 'hover:border-violet-200 hover:shadow-sm'}`}>
               <div className="flex items-start gap-4">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isDone ? 'bg-emerald-50 text-emerald-600' : 'bg-violet-50 text-violet-600'}`}>
                   <Icon className="w-6 h-6" />

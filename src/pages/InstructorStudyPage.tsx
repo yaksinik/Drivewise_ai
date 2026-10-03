@@ -131,7 +131,7 @@ export function InstructorStudyPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <PageHeader
         title="Instructor Ratings Study & Calibration"
         subtitle="Empirical ground-truth validation: comparing automated telemetry scoring against professional driving examiners"
@@ -139,7 +139,7 @@ export function InstructorStudyPage() {
         <div className="mt-3 flex items-center gap-3 flex-wrap">
           <button
             onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+            className="btn-primary"
           >
             <Plus className="w-4 h-4" />
             <span>Record Instructor Rating</span>
@@ -147,7 +147,7 @@ export function InstructorStudyPage() {
 
           <button
             onClick={handleExportCsv}
-            className="px-4 py-2 rounded-xl border border-violet-200 text-violet-700 hover:bg-violet-50 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer bg-white"
+            className="btn-secondary"
           >
             <Download className="w-4 h-4" />
             <span>Export Study Dataset (CSV)</span>
@@ -155,7 +155,7 @@ export function InstructorStudyPage() {
 
           <button
             onClick={handleApplyCalibration}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-[--steady] hover:bg-[--steady]/90 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
           >
             <Sliders className="w-4 h-4" />
             <span>Calibrate Model to Instructors</span>
@@ -163,7 +163,7 @@ export function InstructorStudyPage() {
 
           <button
             onClick={handleResetBenchmark}
-            className="px-3 py-2 rounded-xl text-violet-400 hover:text-violet-600 text-xs font-medium transition-colors"
+            className="px-3 py-2 rounded-xl text-[--ink]/40 hover:text-[--ink]/60 text-xs font-medium transition-colors"
           >
             Reset Benchmark
           </button>
@@ -171,8 +171,8 @@ export function InstructorStudyPage() {
       </PageHeader>
 
       {calibrationSuccess && (
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-center gap-2">
-          <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+        <div className="p-4 rounded-xl bg-[--steady]/10 border border-[--steady]/30 text-[--steady] text-sm flex items-center gap-2">
+          <CheckCircle className="w-5 h-5 shrink-0" />
           <span>
             <strong>Thresholds calibrated!</strong> Algorithmic weights have been updated in the Assumptions Lab to reflect professional instructor consensus.
           </span>
@@ -180,15 +180,15 @@ export function InstructorStudyPage() {
       )}
 
       {/* Methodology Abstract Box */}
-      <Card className="bg-violet-900 text-white border-violet-800">
+      <Card>
         <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
-            <ClipboardCheck className="w-5 h-5 text-violet-200" />
+          <div className="w-10 h-10 rounded-xl bg-[--signal]/10 flex items-center justify-center shrink-0 border border-[--hairline]">
+            <ClipboardCheck className="w-5 h-5 text-[--signal]" />
           </div>
           <div>
-            <h3 className="font-bold text-base text-white">Study Methodology & Construct Validity</h3>
-            <p className="text-xs text-violet-200 mt-1 leading-relaxed">
-              To calibrate subjective driving standards into mathematical telematics boundaries, licensed driving instructors simultaneously evaluate live in-car drives using standard UK DVSA / SAE grading criteria. The parallel ratings are regressed against DriveWise feature vectors to validate Pearson correlation (<span className="font-mono">r</span>), assess systematic bias, and establish empirical threshold multipliers.
+            <h3 className="font-bold text-base text-[--ink]">Study Methodology & Construct Validity</h3>
+            <p className="text-xs text-[--ink]/60 mt-1 leading-relaxed">
+              To calibrate subjective driving standards into mathematical telematics boundaries, licensed driving instructors simultaneously evaluate live in-car drives using standard UK DVSA / SAE grading criteria. The parallel ratings are regressed against DriveWise feature vectors to validate Pearson correlation (<span className="mono">r</span>), assess systematic bias, and establish empirical threshold multipliers.
             </p>
           </div>
         </div>
@@ -196,20 +196,23 @@ export function InstructorStudyPage() {
 
       {/* Empty state — shown when no real ratings exist yet */}
       {dataset.length === 0 && (
-        <Card className="border-orange-200 bg-orange-50">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
-            <div>
-              <h3 className="font-semibold text-orange-900">No instructor ratings collected yet</h3>
-              <p className="text-sm text-orange-700 mt-1">
-                No real instructor ratings have been recorded. Use the{' '}
-                <strong>"Record Instructor Rating"</strong> button above to add your first entry,
-                or import a CSV from a real study session. Statistics and calibration charts will
-                appear once data exists.
+        <Card className="border-dashed border-[--hairline] bg-[--base]">
+          <div className="flex flex-col sm:flex-row items-center gap-5 py-4">
+            <div className="w-16 h-16 rounded-2xl bg-[--signal]/10 flex items-center justify-center shrink-0 border border-[--hairline]">
+              <UserCheck className="w-8 h-8 text-[--signal]" />
+            </div>
+            <div className="text-center sm:text-left">
+              <h3 className="font-semibold text-[--ink] text-base mb-1">
+                No instructor ratings collected yet
+              </h3>
+              <p className="text-sm text-[--ink]/60 leading-relaxed max-w-lg">
+                Use the <strong>"Record Instructor Rating"</strong> button above to add your
+                first entry, or import a CSV from a real study session. Statistics and
+                calibration charts will appear once data exists.
               </p>
-              <p className="text-xs text-orange-500 mt-2">
+              <p className="text-xs text-[--ink]/40 mt-2">
                 The statistical engine (Pearson r, Spearman ρ, MAE, regression, calibration
-                multipliers) is fully implemented and ready — it just needs real data to operate on.
+                multipliers) is fully implemented — it just needs real data to operate on.
               </p>
             </div>
           </div>
@@ -222,39 +225,39 @@ export function InstructorStudyPage() {
       {/* 4 Statistical Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="text-center p-4">
-          <span className="text-xs text-slate-400 uppercase font-semibold">Pearson Correlation (r)</span>
-          <div className="text-3xl font-black text-violet-700 mt-1">
+          <span className="text-xs text-[--ink]/40 font-semibold mono">Pearson Correlation (r)</span>
+          <div className="text-3xl font-black text-[--signal] mt-1 mono">
             {analysis.overallMetrics.pearsonR}
           </div>
-          <span className="text-[11px] text-emerald-600 font-semibold block mt-0.5">
+          <span className="text-[11px] text-[--steady] font-semibold block mt-0.5">
             {analysis.overallMetrics.pearsonR > 0.8 ? 'Strong Validation (p < 0.001)' : 'Moderate Correlation'}
           </span>
         </Card>
 
         <Card className="text-center p-4">
-          <span className="text-xs text-slate-400 uppercase font-semibold">Spearman Rank (ρ)</span>
-          <div className="text-3xl font-black text-violet-700 mt-1">
+          <span className="text-xs text-[--ink]/40 font-semibold mono">Spearman Rank (ρ)</span>
+          <div className="text-3xl font-black text-[--signal] mt-1 mono">
             {analysis.overallMetrics.spearmanRho}
           </div>
-          <span className="text-[11px] text-slate-500 block mt-0.5">Monotonic consistency</span>
+          <span className="text-[11px] text-[--ink]/50 block mt-0.5">Monotonic consistency</span>
         </Card>
 
         <Card className="text-center p-4">
-          <span className="text-xs text-slate-400 uppercase font-semibold">Mean Absolute Error (MAE)</span>
-          <div className="text-3xl font-black text-slate-900 mt-1">
+          <span className="text-xs text-[--ink]/40 font-semibold mono">Mean Absolute Error (MAE)</span>
+          <div className="text-3xl font-black text-[--ink] mt-1 mono">
             {analysis.overallMetrics.meanAbsoluteError}
-            <span className="text-base font-normal text-slate-400 ml-1">pts</span>
+            <span className="text-base font-normal text-[--ink]/40 ml-1">pts</span>
           </div>
-          <span className="text-[11px] text-slate-500 block mt-0.5">On 0–100 rating scale</span>
+          <span className="text-[11px] text-[--ink]/50 block mt-0.5">On 0–100 rating scale</span>
         </Card>
 
         <Card className="text-center p-4">
-          <span className="text-xs text-slate-400 uppercase font-semibold">Systematic Bias</span>
-          <div className="text-3xl font-black text-slate-900 mt-1">
+          <span className="text-xs text-[--ink]/40 font-semibold mono">Systematic Bias</span>
+          <div className="text-3xl font-black text-[--ink] mt-1 mono">
             {analysis.overallMetrics.meanDifferenceBias > 0 ? `+${analysis.overallMetrics.meanDifferenceBias}` : analysis.overallMetrics.meanDifferenceBias}
-            <span className="text-base font-normal text-slate-400 ml-1">pts</span>
+            <span className="text-base font-normal text-[--ink]/40 ml-1">pts</span>
           </div>
-          <span className="text-[11px] text-slate-500 block mt-0.5">
+          <span className="text-[11px] text-[--ink]/50 block mt-0.5">
             {analysis.overallMetrics.meanDifferenceBias > 0 ? 'Algo slightly more lenient' : 'Algo slightly stricter'}
           </span>
         </Card>
@@ -351,8 +354,8 @@ export function InstructorStudyPage() {
         <h3 className="font-bold text-slate-900 text-sm uppercase tracking-wider mb-3">
           Empirical Threshold Adjustments (Calibration Matrix)
         </h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
+        <div className="overflow-x-auto -mx-5 px-5">
+          <table className="w-full text-xs text-left min-w-[560px]">
             <thead>
               <tr className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                 <th className="p-3">Skill Domain</th>
@@ -403,8 +406,8 @@ export function InstructorStudyPage() {
           <span className="text-xs text-slate-500 font-mono">Showing {dataset.length} evaluation sessions</span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
+        <div className="overflow-x-auto -mx-5 px-5">
+          <table className="w-full text-xs text-left min-w-[480px]">
             <thead>
               <tr className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                 <th className="p-3">Session Title</th>

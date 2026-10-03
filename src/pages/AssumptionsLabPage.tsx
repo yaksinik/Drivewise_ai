@@ -102,7 +102,7 @@ export function AssumptionsLabPage() {
   ];
 
   return (
-    <div>
+    <div className="animate-fade-in">
       <PageHeader
         title="Assumptions Lab"
         subtitle="See exactly which assumptions drive each score — and change them to see the effect"
@@ -111,32 +111,32 @@ export function AssumptionsLabPage() {
       {/* Data quality */}
       <Card className="mb-6">
         <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-violet-50 flex items-center justify-center shrink-0">
-            <ShieldCheck className="w-6 h-6 text-violet-600" />
+          <div className="w-12 h-12 rounded-xl bg-[--signal]/10 flex items-center justify-center shrink-0 border border-[--hairline]">
+            <ShieldCheck className="w-6 h-6 text-[--signal]" />
           </div>
           <div className="flex-1">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <h3 className="font-semibold text-violet-950">Data Quality</h3>
+              <h3 className="font-semibold text-[--ink]">Data Quality</h3>
               <span
-                className={`text-2xl font-bold ${
-                  scoreResult.dataQuality.score >= 40 ? 'text-violet-700' : 'text-orange-600'
+                className={`text-2xl font-bold mono ${
+                  scoreResult.dataQuality.score >= 40 ? 'text-[--signal]' : 'text-[--caution]'
                 }`}
               >
                 {scoreResult.dataQuality.score}/100
               </span>
             </div>
             <div className="grid grid-cols-3 gap-3 mt-3 text-sm">
-              <div className="bg-violet-50 rounded-lg p-2 text-center">
-                <p className="text-violet-400 text-xs">Sample gaps</p>
-                <p className="font-semibold text-violet-800">{scoreResult.dataQuality.sampleGaps}%</p>
+              <div className="bg-[--base] border border-[--hairline] rounded-lg p-2 text-center">
+                <p className="text-[--ink]/40 text-xs">Sample gaps</p>
+                <p className="font-semibold text-[--ink] mono">{scoreResult.dataQuality.sampleGaps}%</p>
               </div>
-              <div className="bg-violet-50 rounded-lg p-2 text-center">
-                <p className="text-violet-400 text-xs">Noise level</p>
-                <p className="font-semibold text-violet-800">{scoreResult.dataQuality.noiseLevel}</p>
+              <div className="bg-[--base] border border-[--hairline] rounded-lg p-2 text-center">
+                <p className="text-[--ink]/40 text-xs">Noise level</p>
+                <p className="font-semibold text-[--ink] mono">{scoreResult.dataQuality.noiseLevel}</p>
               </div>
-              <div className="bg-violet-50 rounded-lg p-2 text-center">
-                <p className="text-violet-400 text-xs">Flat/missing signals</p>
-                <p className="font-semibold text-violet-800">
+              <div className="bg-[--base] border border-[--hairline] rounded-lg p-2 text-center">
+                <p className="text-[--ink]/40 text-xs">Flat/missing signals</p>
+                <p className="font-semibold text-[--ink] mono">
                   {scoreResult.dataQuality.missingFlatSignals.length === 0
                     ? 'None'
                     : scoreResult.dataQuality.missingFlatSignals.length}
@@ -144,7 +144,7 @@ export function AssumptionsLabPage() {
               </div>
             </div>
             {scoreResult.dataQuality.reasons.length > 0 && (
-              <ul className="mt-3 text-sm text-orange-600 space-y-1">
+              <ul className="mt-3 text-sm text-[--caution] space-y-1">
                 {scoreResult.dataQuality.reasons.map((r, i) => (
                   <li key={i} className="flex items-start gap-2">
                     <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
@@ -158,12 +158,12 @@ export function AssumptionsLabPage() {
       </Card>
 
       {scoreResult.dataQuality.score < 40 ? (
-        <Card className="bg-orange-50 border-orange-200">
+        <Card className="bg-[--caution]/10 border border-[--caution]/30">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-6 h-6 text-orange-600 shrink-0" />
+            <AlertTriangle className="w-6 h-6 text-[--caution] shrink-0" />
             <div>
-              <h3 className="font-semibold text-orange-900">Not enough reliable data to score</h3>
-              <p className="text-sm text-orange-700 mt-1">
+              <h3 className="font-semibold text-[--ink]">Not enough reliable data to score</h3>
+              <p className="text-sm text-[--ink]/60 mt-1">
                 The data quality is too low ({scoreResult.dataQuality.score}/100) to produce
                 trustworthy scores. The issues above need to be resolved before scores are meaningful.
               </p>
@@ -176,12 +176,12 @@ export function AssumptionsLabPage() {
           <Card className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <Table className="w-5 h-5 text-violet-600" />
-                <h3 className="font-semibold text-violet-950">Assumption profiles</h3>
+                <Table className="w-5 h-5 text-[--signal]" />
+                <h3 className="font-semibold text-[--ink]">Assumption profiles</h3>
               </div>
               <button
                 onClick={resetThresholds}
-                className="inline-flex items-center gap-1.5 text-sm text-violet-500 hover:text-violet-700"
+                className="inline-flex items-center gap-1.5 text-sm text-[--signal] hover:text-[--signal]/80"
               >
                 <RotateCcw className="w-4 h-4" />
                 Reset to Standard
@@ -196,12 +196,12 @@ export function AssumptionsLabPage() {
                     onClick={() => applyProfile(profile.id)}
                     className={`text-left p-4 rounded-xl border-2 transition-all ${
                       active
-                        ? 'border-violet-600 bg-violet-50'
-                        : 'border-violet-100 hover:border-violet-300'
+                        ? 'border-[--signal] bg-[--signal]/10'
+                        : 'border-[--hairline] hover:border-[--signal]/30'
                     }`}
                   >
-                    <p className="font-semibold text-violet-950">{profile.label}</p>
-                    <p className="text-xs text-violet-500 mt-1">{profile.description}</p>
+                    <p className="font-semibold text-[--ink]">{profile.label}</p>
+                    <p className="text-xs text-[--ink]/60 mt-1">{profile.description}</p>
                   </button>
                 );
               })}
@@ -209,8 +209,8 @@ export function AssumptionsLabPage() {
           </Card>
 
           {/* Skill cards with before/after */}
-          <h3 className="font-semibold text-violet-950 mb-3 flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-violet-600" />
+          <h3 className="font-semibold text-[--ink] mb-3 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-[--signal]" />
             Skill scores (with before/after vs Standard profile)
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
@@ -232,8 +232,8 @@ export function AssumptionsLabPage() {
               <Info className="w-5 h-5 text-violet-600" />
               All assumptions
             </h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto -mx-5 px-5">
+              <table className="w-full text-sm min-w-[480px]">
                 <thead>
                   <tr className="border-b border-violet-100 text-left">
                     <th className="py-2 pr-4 font-medium text-violet-500">Assumption</th>
@@ -438,13 +438,13 @@ export function AssumptionsLabPage() {
         </>
       )}
 
-      {/* Fixed assumptions */}
+          {/* Fixed assumptions */}
       <Card>
-        <h3 className="font-semibold text-violet-950 mb-3">Fixed assumptions (not adjustable)</h3>
+        <h3 className="font-semibold text-[--ink] mb-3">Fixed assumptions (not adjustable)</h3>
         <ul className="space-y-2">
           {fixedAssumptions.map((a, i) => (
-            <li key={i} className="flex items-start gap-2 text-sm text-violet-600">
-              <Info className="w-4 h-4 mt-0.5 shrink-0 text-violet-400" />
+            <li key={i} className="flex items-start gap-2 text-sm text-[--ink]/60">
+              <Info className="w-4 h-4 mt-0.5 shrink-0 text-[--ink]/40" />
               {a}
             </li>
           ))}

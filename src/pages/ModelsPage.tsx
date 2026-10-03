@@ -105,7 +105,7 @@ const STATUS_CONFIG = {
 
 export function ModelsPage() {
   return (
-    <div>
+    <div className="animate-fade-in">
       <PageHeader
         title="Models & Methods"
         subtitle="What's built, what's tested in notebooks, and what's planned"
@@ -130,8 +130,8 @@ export function ModelsPage() {
           <Cpu className="w-5 h-5 text-violet-600" />
           <h3 className="font-semibold text-violet-950">Method inventory</h3>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto -mx-5 px-5">
+          <table className="w-full text-sm min-w-[540px]">
             <thead>
               <tr className="border-b border-violet-100 text-left">
                 <th className="py-2 pr-4 font-medium text-violet-500">Method</th>

@@ -46,6 +46,7 @@ interface StoreValue {
   setLoading: (v: boolean) => void;
   liveStatus: LiveStatus;
   liveError: string | null;
+  liveGpsWarning: string | null;
   liveRemainingSec: number;
   liveDurationSec: number;
   setLiveDurationSec: (sec: number) => void;
@@ -97,6 +98,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // ---- live trip state ----
   const [liveStatus, setLiveStatus] = useState<LiveStatus>('idle');
   const [liveError, setLiveError] = useState<string | null>(null);
+  const [liveGpsWarning, setLiveGpsWarning] = useState<string | null>(null);
   const [liveDurationSec, setLiveDurationSec] = useState<number>(60);
   const [liveRemainingSec, setLiveRemainingSec] = useState<number>(60);
   const [liveSamples, setLiveSamples] = useState<TelemetrySample[]>([]);
@@ -158,6 +160,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setDataSource('live');
     setLiveStatus('idle');
     setLiveError(null);
+    setLiveGpsWarning(null);
     setLiveSnapshot(null);
   }, []);
 
@@ -177,6 +180,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setLiveSnapshot(null);
       return;
     }
+
+    // Check whether any GPS fixes were captured
+    const gpsFixCount = Array.isArray(raw) ? 0 : raw.gps.length;
+    if (gpsFixCount === 0) {
+      setLiveGpsWarning(
+        'No GPS signal was received — speed stayed at 0 throughout the trip. ' +
+        'Speed Consistency scores are not meaningful for this recording. ' +
+        'Grant location permission and ensure the phone has a clear sky view to capture real speed data.'
+      );
+    } else {
+      setLiveGpsWarning(null);
+    }
+
     setLiveSamples(processed);
     setDataSource('live');
     setLiveStatus('done');
@@ -328,6 +344,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setLoading,
     liveStatus,
     liveError,
+    liveGpsWarning,
     liveRemainingSec,
     liveDurationSec,
     setLiveDurationSec,

@@ -6,7 +6,8 @@ import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ScatterChart, Scatter, ZAxis,
 } from 'recharts';
-import { PageHeader, Card, EmptyState, LoadingState, ErrorState } from '@/components/ui';
+import { PageHeader, Card, EmptyState, LoadingState, SkeletonCard, ErrorState } from '@/components/ui';
+import { TripRouteMap } from '@/components/TripRouteMap';
 
 // ---- Types ----
 
@@ -151,14 +152,34 @@ export function DatasetExplorerPage() {
     return rows;
   }, [tripData]);
 
-  // Prepare map data (downsample GPS)
+  // Prepare map data (downsample GPS) with bearing arrows
   const mapData = useMemo(() => {
     if (!tripData) return [];
     const maxPoints = 300;
     const step = Math.max(1, Math.floor(tripData.lat.length / maxPoints));
-    const rows: { lat: number; lon: number; idx: number }[] = [];
+    const rows: { lat: number; lon: number; idx: number; bearing: number | null }[] = [];
+    
+    // Compute bearing from consecutive points using standard formula
+    const computeBearing = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const lat1Rad = lat1 * Math.PI / 180;
+      const lat2Rad = lat2 * Math.PI / 180;
+      const y = Math.sin(dLon) * Math.cos(lat2Rad);
+      const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
+      const bearing = Math.atan2(y, x) * 180 / Math.PI;
+      return (bearing + 360) % 360; // normalize to 0-360
+    };
+
     for (let i = 0; i < tripData.lat.length; i += step) {
-      rows.push({ lat: tripData.lat[i], lon: tripData.lon[i], idx: i });
+      let bearing: number | null = null;
+      // Compute bearing from this point to next (if exists)
+      if (i + step < tripData.lat.length) {
+        bearing = computeBearing(
+          tripData.lat[i], tripData.lon[i],
+          tripData.lat[i + step], tripData.lon[i + step]
+        );
+      }
+      rows.push({ lat: tripData.lat[i], lon: tripData.lon[i], idx: i, bearing });
     }
     return rows;
   }, [tripData]);
@@ -204,7 +225,16 @@ export function DatasetExplorerPage() {
 
   // ---- Loading / Error states ----
 
-  if (loadingTrip && !tripData) return <LoadingState />;
+  if (loadingTrip && !tripData) {
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <PageHeader title="Dataset Explorer" subtitle="Loading trip data…" />
+        <SkeletonCard lines={2} />
+        <SkeletonCard lines={4} />
+        <SkeletonCard lines={3} />
+      </div>
+    );
+  }
   if (tripError) {
     return (
       <ErrorState
@@ -217,20 +247,20 @@ export function DatasetExplorerPage() {
   const meta = tripData.meta;
 
   return (
-    <div>
+    <div className="animate-fade-in">
       <PageHeader
         title="Dataset Explorer"
         subtitle="Real driving data from the UAH-DriveSet — explore trips, telemetry, and model predictions"
       />
 
       {/* Permanent REAL DATA badge */}
-      <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold bg-green-100 text-green-800 border border-green-300">
-        <Database className="w-4 h-4" />
+      <div className="mb-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-[--base] text-[--steady] border border-[--hairline]">
+        <span className="status-dot status-steady" />
         REAL DATA: UAH-DriveSet
       </div>
 
       {/* Summary card */}
-      <Card className="mb-6 bg-gradient-to-br from-violet-600 to-violet-800 border-violet-700">
+      <Card className="mb-6">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           <SummaryStat label="Dataset" value="UAH-DriveSet" />
           <SummaryStat label="Drivers" value="6" />
@@ -239,7 +269,7 @@ export function DatasetExplorerPage() {
           <SummaryStat label="Total data" value="500+ min" />
           <SummaryStat label="Citation" value="Romera et al." small />
         </div>
-        <p className="text-violet-200 text-xs mt-3">
+        <p className="text-xs text-[--ink]/60 mt-3">
           Romera et al., "Segmenting driving behavior into driver styles using forward reasoning
           and system identification," IEEE ITSC 2016.
         </p>
@@ -249,11 +279,12 @@ export function DatasetExplorerPage() {
       <Card className="mb-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <label className="text-xs font-medium text-violet-500 block mb-1">Select trip</label>
+            <label className="text-xs font-medium text-[--ink]/60 block mb-1.5">Select trip</label>
             <select
               value={selectedFile}
               onChange={(e) => setSelectedFile(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-violet-200 text-sm text-violet-800 bg-white"
+              className="w-full px-3 py-2 rounded-lg border border-[--hairline] text-sm text-[--ink] bg-[--base] transition-colors hover:border-[--signal]/30 focus:border-[--signal] focus:outline-none focus:ring-2 focus:ring-[--signal]/20"
+              disabled={loadingTrip}
             >
               {TRIP_MANIFEST.map((t) => (
                 <option key={t.file} value={t.file}>{t.label}</option>
@@ -261,31 +292,32 @@ export function DatasetExplorerPage() {
             </select>
           </div>
           <div>
-            <label className="text-xs font-medium text-violet-500 block mb-1">Driver</label>
-            <div className="px-3 py-2 rounded-lg bg-violet-50 text-sm font-medium text-violet-800">
+            <label className="text-xs font-medium text-[--ink]/60 block mb-1.5">Driver</label>
+            <div className="px-3 py-2 rounded-lg bg-[--base] border border-[--hairline] text-sm font-medium text-[--ink] mono">
               {meta.driver}
             </div>
           </div>
           <div>
-            <label className="text-xs font-medium text-violet-500 block mb-1">Behaviour</label>
+            <label className="text-xs font-medium text-[--ink]/60 block mb-1.5">Behaviour</label>
             <div
-              className="px-3 py-2 rounded-lg text-sm font-medium"
+              className="px-3 py-2 rounded-lg text-sm font-medium mono"
               style={{
-                backgroundColor: `${BEHAVIOUR_COLORS[meta.behaviour] || '#7c3aed'}20`,
+                backgroundColor: `${BEHAVIOUR_COLORS[meta.behaviour] || '#7c3aed'}15`,
                 color: BEHAVIOUR_COLORS[meta.behaviour] || '#7c3aed',
+                border: `1px solid ${BEHAVIOUR_COLORS[meta.behaviour] || '#7c3aed'}40`,
               }}
             >
               {BEHAVIOUR_LABELS[meta.behaviour] || meta.behaviour}
             </div>
           </div>
           <div>
-            <label className="text-xs font-medium text-violet-500 block mb-1">Road type</label>
-            <div className="px-3 py-2 rounded-lg bg-violet-50 text-sm font-medium capitalize text-violet-800">
+            <label className="text-xs font-medium text-[--ink]/60 block mb-1.5">Road type</label>
+            <div className="px-3 py-2 rounded-lg bg-[--base] border border-[--hairline] text-sm font-medium capitalize text-[--ink] mono">
               {meta.road}
             </div>
           </div>
         </div>
-        <p className="text-xs text-violet-400 mt-3">
+        <p className="text-xs text-[--ink]/40 mt-3 mono">
           Sampled at {meta.hz} Hz · {meta.duration_s ?? tripData.t.length / meta.hz}s duration · {tripData.t.length} samples
         </p>
       </Card>
@@ -295,28 +327,28 @@ export function DatasetExplorerPage() {
         {/* Speed chart */}
         <Card>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-violet-950">Speed</h3>
-            <span className="text-xs text-violet-400">km/h vs time (s)</span>
+            <h3 className="font-semibold text-[--ink]">Speed</h3>
+            <span className="text-xs text-[--ink]/40 mono">km/h vs time (s)</span>
           </div>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 20, left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ede9fe" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--hairline)" />
                 <XAxis
                   dataKey="t"
-                  label={{ value: 'Time (s)', position: 'insideBottom', offset: -5, style: { fontSize: 12, fill: '#8b5cf6' } }}
-                  tick={{ fontSize: 11, fill: '#a78bfa' }}
+                  label={{ value: 'Time (s)', position: 'insideBottom', offset: -5, style: { fontSize: 12, fill: 'var(--ink)', opacity: 0.6 } }}
+                  tick={{ fontSize: 11, fill: 'var(--ink)', opacity: 0.5 }}
                 />
                 <YAxis
-                  label={{ value: 'Speed (km/h)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: '#8b5cf6' } }}
-                  tick={{ fontSize: 11, fill: '#a78bfa' }}
+                  label={{ value: 'Speed (km/h)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: 'var(--ink)', opacity: 0.6 } }}
+                  tick={{ fontSize: 11, fill: 'var(--ink)', opacity: 0.5 }}
                 />
                 <Tooltip
-                  contentStyle={{ borderRadius: 12, border: '1px solid #ede9fe', fontSize: 12 }}
+                  contentStyle={{ borderRadius: 8, border: '1px solid var(--hairline)', fontSize: 12, backgroundColor: 'var(--base)' }}
                   formatter={(v) => [`${Number(v).toFixed(1)} km/h`, 'Speed']}
                   labelFormatter={(l) => `t = ${l} s`}
                 />
-                <Line type="monotone" dataKey="speed_kmh" stroke="#7c3aed" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="speed_kmh" stroke="var(--signal)" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -325,24 +357,24 @@ export function DatasetExplorerPage() {
         {/* Acceleration chart (ax, ay, az) */}
         <Card>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-violet-950">Acceleration (3 axes)</h3>
-            <span className="text-xs text-violet-400">m/s² vs time (s)</span>
+            <h3 className="font-semibold text-[--ink]">Acceleration (3 axes)</h3>
+            <span className="text-xs text-[--ink]/40 mono">m/s² vs time (s)</span>
           </div>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 20, left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ede9fe" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--hairline)" />
                 <XAxis
                   dataKey="t"
-                  label={{ value: 'Time (s)', position: 'insideBottom', offset: -5, style: { fontSize: 12, fill: '#8b5cf6' } }}
-                  tick={{ fontSize: 11, fill: '#a78bfa' }}
+                  label={{ value: 'Time (s)', position: 'insideBottom', offset: -5, style: { fontSize: 12, fill: 'var(--ink)', opacity: 0.6 } }}
+                  tick={{ fontSize: 11, fill: 'var(--ink)', opacity: 0.5 }}
                 />
                 <YAxis
-                  label={{ value: 'Acceleration (m/s²)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: '#8b5cf6' } }}
-                  tick={{ fontSize: 11, fill: '#a78bfa' }}
+                  label={{ value: 'Acceleration (m/s²)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: 'var(--ink)', opacity: 0.6 } }}
+                  tick={{ fontSize: 11, fill: 'var(--ink)', opacity: 0.5 }}
                 />
                 <Tooltip
-                  contentStyle={{ borderRadius: 12, border: '1px solid #ede9fe', fontSize: 12 }}
+                  contentStyle={{ borderRadius: 8, border: '1px solid var(--hairline)', fontSize: 12, backgroundColor: 'var(--base)' }}
                   formatter={(v, name) => [`${Number(v).toFixed(2)} m/s²`, String(name)]}
                   labelFormatter={(l) => `t = ${l} s`}
                 />
@@ -357,28 +389,28 @@ export function DatasetExplorerPage() {
         {/* Lane offset chart */}
         <Card>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-violet-950">Lane offset</h3>
-            <span className="text-xs text-violet-400">m vs time (s)</span>
+            <h3 className="font-semibold text-[--ink]">Lane offset</h3>
+            <span className="text-xs text-[--ink]/40 mono">m vs time (s)</span>
           </div>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 20, left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ede9fe" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--hairline)" />
                 <XAxis
                   dataKey="t"
-                  label={{ value: 'Time (s)', position: 'insideBottom', offset: -5, style: { fontSize: 12, fill: '#8b5cf6' } }}
-                  tick={{ fontSize: 11, fill: '#a78bfa' }}
+                  label={{ value: 'Time (s)', position: 'insideBottom', offset: -5, style: { fontSize: 12, fill: 'var(--ink)', opacity: 0.6 } }}
+                  tick={{ fontSize: 11, fill: 'var(--ink)', opacity: 0.5 }}
                 />
                 <YAxis
-                  label={{ value: 'Lane offset (m)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: '#8b5cf6' } }}
-                  tick={{ fontSize: 11, fill: '#a78bfa' }}
+                  label={{ value: 'Lane offset (m)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: 'var(--ink)', opacity: 0.6 } }}
+                  tick={{ fontSize: 11, fill: 'var(--ink)', opacity: 0.5 }}
                 />
                 <Tooltip
-                  contentStyle={{ borderRadius: 12, border: '1px solid #ede9fe', fontSize: 12 }}
+                  contentStyle={{ borderRadius: 8, border: '1px solid var(--hairline)', fontSize: 12, backgroundColor: 'var(--base)' }}
                   formatter={(v) => [v != null ? `${Number(v).toFixed(3)} m` : '—', 'Lane offset']}
                   labelFormatter={(l) => `t = ${l} s`}
                 />
-                <Line type="monotone" dataKey="lane_offset_m" stroke="#7c3aed" strokeWidth={2} dot={false} connectNulls />
+                <Line type="monotone" dataKey="lane_offset_m" stroke="var(--signal)" strokeWidth={2} dot={false} connectNulls />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -387,24 +419,24 @@ export function DatasetExplorerPage() {
         {/* Distance ahead chart */}
         <Card>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-violet-950">Distance to vehicle ahead</h3>
-            <span className="text-xs text-violet-400">m vs time (s)</span>
+            <h3 className="font-semibold text-[--ink]">Distance to vehicle ahead</h3>
+            <span className="text-xs text-[--ink]/40 mono">m vs time (s)</span>
           </div>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 20, left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ede9fe" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--hairline)" />
                 <XAxis
                   dataKey="t"
-                  label={{ value: 'Time (s)', position: 'insideBottom', offset: -5, style: { fontSize: 12, fill: '#8b5cf6' } }}
-                  tick={{ fontSize: 11, fill: '#a78bfa' }}
+                  label={{ value: 'Time (s)', position: 'insideBottom', offset: -5, style: { fontSize: 12, fill: 'var(--ink)', opacity: 0.6 } }}
+                  tick={{ fontSize: 11, fill: 'var(--ink)', opacity: 0.5 }}
                 />
                 <YAxis
-                  label={{ value: 'Distance (m)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: '#8b5cf6' } }}
-                  tick={{ fontSize: 11, fill: '#a78bfa' }}
+                  label={{ value: 'Distance (m)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: 'var(--ink)', opacity: 0.6 } }}
+                  tick={{ fontSize: 11, fill: 'var(--ink)', opacity: 0.5 }}
                 />
                 <Tooltip
-                  contentStyle={{ borderRadius: 12, border: '1px solid #ede9fe', fontSize: 12 }}
+                  contentStyle={{ borderRadius: 8, border: '1px solid var(--hairline)', fontSize: 12, backgroundColor: 'var(--base)' }}
                   formatter={(v) => [v != null ? `${Number(v).toFixed(1)} m` : 'No vehicle', 'Distance ahead']}
                   labelFormatter={(l) => `t = ${l} s`}
                 />
@@ -412,7 +444,7 @@ export function DatasetExplorerPage() {
               </LineChart>
             </ResponsiveContainer>
           </div>
-          <p className="text-xs text-violet-400 mt-2">
+          <p className="text-xs text-[--ink]/40 mt-2">
             Gaps indicate no vehicle detected ahead.
           </p>
         </Card>
@@ -421,30 +453,30 @@ export function DatasetExplorerPage() {
       {/* Prediction strip */}
       {loadingPred ? (
         <Card className="mb-6">
-          <div className="flex items-center gap-3 text-violet-600">
+          <div className="flex items-center gap-3 text-[--ink]/60">
             <Loader2 className="w-5 h-5 animate-spin" />
             <span className="text-sm">Loading model predictions…</span>
           </div>
         </Card>
       ) : predError ? (
-        <Card className="mb-6 border-orange-200 bg-orange-50">
+        <Card className="mb-6 border-[--caution] bg-[--caution]/5">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
+            <AlertTriangle className="w-5 h-5 text-[--caution] shrink-0 mt-0.5" />
             <div>
-              <h3 className="font-semibold text-orange-900 text-sm">Predictions unavailable</h3>
-              <p className="text-xs text-orange-700 mt-1">{predError}</p>
+              <h3 className="font-semibold text-[--ink] text-sm">Predictions unavailable</h3>
+              <p className="text-xs text-[--ink]/60 mt-1">{predError}</p>
             </div>
           </div>
         </Card>
       ) : predictions && tripPredictions.length > 0 ? (
         <Card className="mb-6">
-          <h3 className="font-semibold text-violet-950 mb-1">Predicted behaviour over time</h3>
-          <p className="text-xs text-violet-500 mb-4">
+          <h3 className="font-semibold text-[--ink] mb-1">Predicted behaviour over time</h3>
+          <p className="text-xs text-[--ink]/60 mb-4">
             Predictions come from a model trained without this driver (leave-one-driver-out).
           </p>
 
           {/* Color strip */}
-          <div className="flex rounded-lg overflow-hidden h-10 mb-4 border border-violet-100">
+          <div className="flex rounded-lg overflow-hidden h-10 mb-4 border border-[--hairline]">
             {tripPredictions.map((row) => {
               const maxIdx = row.proba.indexOf(Math.max(...row.proba));
               const predClass = predictions.classes[maxIdx];
@@ -456,7 +488,7 @@ export function DatasetExplorerPage() {
                   style={{ backgroundColor: color }}
                   title={`t=${row.t_start}s — predicted: ${BEHAVIOUR_LABELS[predClass] || predClass} (true: ${BEHAVIOUR_LABELS[row.true] || row.true})`}
                 >
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/20 text-white text-[10px] font-medium transition-opacity">
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/20 text-white text-[10px] font-medium transition-opacity mono">
                     {row.t_start}s
                   </div>
                 </div>
@@ -472,14 +504,14 @@ export function DatasetExplorerPage() {
                   className="w-4 h-4 rounded"
                   style={{ backgroundColor: BEHAVIOUR_COLORS[cls] || '#7c3aed' }}
                 />
-                <span className="text-violet-700 font-medium">
+                <span className="text-[--ink] font-medium">
                   {BEHAVIOUR_LABELS[cls] || cls}
                 </span>
               </div>
             ))}
           </div>
 
-          <p className="text-xs text-violet-400 mt-3">
+          <p className="text-xs text-[--ink]/40 mt-3">
             Each segment is a 30-second window coloured by the model's top predicted behaviour.
             Hover for details. {predictions.note}.
           </p>
@@ -489,75 +521,123 @@ export function DatasetExplorerPage() {
       {/* Map (GPS scatter) */}
       <Card className="mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-violet-950 flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-violet-600" />
+          <h3 className="font-semibold text-[--ink] flex items-center gap-2">
+            <MapPin className="w-5 h-5 text-[--signal]" />
             GPS trajectory
           </h3>
-          <span className="text-xs text-violet-400">Latitude vs longitude</span>
+          <span className="text-xs text-[--ink]/40 mono">Latitude vs longitude</span>
         </div>
         {mapData.length > 0 && (
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <ScatterChart margin={{ top: 10, right: 20, bottom: 30, left: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ede9fe" />
+              <TripRouteMap lat={tripData.lat} lon={tripData.lon} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--hairline)" />
                 <XAxis
                   type="number"
                   dataKey="lon"
                   name="Longitude"
-                  label={{ value: 'Longitude (°)', position: 'insideBottom', offset: -10, style: { fontSize: 12, fill: '#8b5cf6' } }}
-                  tick={{ fontSize: 10, fill: '#a78bfa' }}
+                  label={{ value: 'Longitude (°)', position: 'insideBottom', offset: -10, style: { fontSize: 12, fill: 'var(--ink)', opacity: 0.6 } }}
+                  tick={{ fontSize: 10, fill: 'var(--ink)', opacity: 0.5 }}
                   domain={['dataMin', 'dataMax']}
                 />
                 <YAxis
                   type="number"
                   dataKey="lat"
                   name="Latitude"
-                  label={{ value: 'Latitude (°)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: '#8b5cf6' } }}
-                  tick={{ fontSize: 10, fill: '#a78bfa' }}
+                  label={{ value: 'Latitude (°)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: 'var(--ink)', opacity: 0.6 } }}
+                  tick={{ fontSize: 10, fill: 'var(--ink)', opacity: 0.5 }}
                   domain={['dataMin', 'dataMax']}
                 />
                 <ZAxis range={[3, 3]} />
                 <Tooltip
-                  contentStyle={{ borderRadius: 12, border: '1px solid #ede9fe', fontSize: 12 }}
+                  contentStyle={{ borderRadius: 8, border: '1px solid var(--hairline)', fontSize: 12, backgroundColor: 'var(--base)' }}
                   formatter={(v, name) => [Number(v).toFixed(6), String(name)]}
                   cursor={{ strokeDasharray: '3 3' }}
                 />
-                <Scatter data={mapData} fill="#7c3aed" fillOpacity={0.6} />
-              </ScatterChart>
+                
+                {/* Base trajectory points */}
+                <Scatter data={mapData} fill="var(--signal)" fillOpacity={0.6} />
+                
+                {/* Direction arrows every 10th point */}
+                <Scatter
+                  data={mapData.filter((_, i) => i % 10 === 0 && i > 0 && i < mapData.length - 1)}
+                  fill="#6D4AFF"
+                  shape={(props: any) => {
+                    const { cx, cy, payload } = props;
+                    if (!payload.bearing) return null;
+                    const angle = payload.bearing - 90; // SVG rotation offset
+                    return (
+                      <g transform={`translate(${cx},${cy}) rotate(${angle})`}>
+                        <polygon points="0,-6 4,6 0,3 -4,6" fill="#6D4AFF" opacity={0.8} />
+                      </g>
+                    );
+                  }}
+                />
+
+                {/* Start marker (green) */}
+                <Scatter
+                  data={[mapData[0]]}
+                  fill="#1B8A5A"
+                  shape={(props: any) => {
+                    const { cx, cy } = props;
+                    return (
+                      <g>
+                        <circle cx={cx} cy={cy} r={6} fill="#1B8A5A" />
+                        <text x={cx} y={cy + 15} textAnchor="middle" fontSize={10} fill="#1B8A5A" fontWeight="bold">Start</text>
+                      </g>
+                    );
+                  }}
+                />
+
+                {/* End marker (red) */}
+                <Scatter
+                  data={[mapData[mapData.length - 1]]}
+                  fill="#dc2626"
+                  shape={(props: any) => {
+                    const { cx, cy } = props;
+                    return (
+                      <g>
+                        <circle cx={cx} cy={cy} r={6} fill="#dc2626" />
+                        <text x={cx} y={cy + 15} textAnchor="middle" fontSize={10} fill="#dc2626" fontWeight="bold">End</text>
+                      </g>
+                    );
+                  }}
+                />
+              
             </ResponsiveContainer>
           </div>
         )}
-        <p className="text-xs text-violet-400 mt-2">
-          Each point is a GPS sample along the trip route, downsampled for rendering.
+        <p className="text-xs text-[--ink]/40 mt-2">
+          Direction arrows show bearing every 10th point. Green marker = start, red marker = end.
         </p>
       </Card>
 
       {/* Data table — first 20 rows */}
       <Card>
-        <h3 className="font-semibold text-violet-950 mb-3">Raw data — first 20 rows</h3>
+        <h3 className="font-semibold text-[--ink] mb-3">Raw data — first 20 rows</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-violet-100 text-left">
+              <tr className="border-b border-[--hairline] text-left">
                 {['t (s)', 'ax (m/s²)', 'ay (m/s²)', 'az (m/s²)', 'speed (km/h)', 'lat (°)', 'lon (°)', 'lane (m)', 'dist (m)'].map((h) => (
-                  <th key={h} className="py-2 px-2 font-medium text-violet-500 whitespace-nowrap">{h}</th>
+                  <th key={h} className="py-2 px-2 font-medium text-[--ink]/60 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {tableData.map((row, i) => (
-                <tr key={i} className="border-b border-violet-50">
-                  <td className="py-1.5 px-2 tabular-nums text-violet-800">{Number(row.t).toFixed(2)}</td>
-                  <td className="py-1.5 px-2 tabular-nums text-violet-800">{(row.ax as number).toFixed(3)}</td>
-                  <td className="py-1.5 px-2 tabular-nums text-violet-800">{(row.ay as number).toFixed(3)}</td>
-                  <td className="py-1.5 px-2 tabular-nums text-violet-800">{(row.az as number).toFixed(3)}</td>
-                  <td className="py-1.5 px-2 tabular-nums text-violet-800">{(row.speed_kmh as number).toFixed(1)}</td>
-                  <td className="py-1.5 px-2 tabular-nums text-violet-800">{(row.lat as number).toFixed(5)}</td>
-                  <td className="py-1.5 px-2 tabular-nums text-violet-800">{(row.lon as number).toFixed(5)}</td>
-                  <td className="py-1.5 px-2 tabular-nums text-violet-800">
+                <tr key={i} className="border-b border-[--hairline]/50">
+                  <td className="py-1.5 px-2 mono text-[--ink]">{Number(row.t).toFixed(2)}</td>
+                  <td className="py-1.5 px-2 mono text-[--ink]">{(row.ax as number).toFixed(3)}</td>
+                  <td className="py-1.5 px-2 mono text-[--ink]">{(row.ay as number).toFixed(3)}</td>
+                  <td className="py-1.5 px-2 mono text-[--ink]">{(row.az as number).toFixed(3)}</td>
+                  <td className="py-1.5 px-2 mono text-[--ink]">{(row.speed_kmh as number).toFixed(1)}</td>
+                  <td className="py-1.5 px-2 mono text-[--ink]">{(row.lat as number).toFixed(5)}</td>
+                  <td className="py-1.5 px-2 mono text-[--ink]">{(row.lon as number).toFixed(5)}</td>
+                  <td className="py-1.5 px-2 mono text-[--ink]">
                     {row.lane_offset_m != null ? (row.lane_offset_m as number).toFixed(3) : '—'}
                   </td>
-                  <td className="py-1.5 px-2 tabular-nums text-violet-800">
+                  <td className="py-1.5 px-2 mono text-[--ink]">
                     {row.dist_ahead_m != null ? (row.dist_ahead_m as number).toFixed(1) : '—'}
                   </td>
                 </tr>
@@ -565,14 +645,14 @@ export function DatasetExplorerPage() {
             </tbody>
           </table>
         </div>
-        <p className="text-xs text-violet-400 mt-3">
+        <p className="text-xs text-[--ink]/40 mt-3 mono">
           Showing 20 of {tripData.t.length} total samples in this trip.
         </p>
       </Card>
 
-      <div className="mt-4 flex items-center gap-2 text-xs text-violet-400">
+      <div className="mt-4 flex items-center gap-2 text-xs text-[--ink]/40">
         <Download className="w-3.5 h-3.5" />
-        Trip data loaded from /public/data/{selectedFile} · Predictions from /public/data/model_predictions.json
+        <span className="mono">Trip data loaded from /public/data/{selectedFile} · Predictions from /public/data/model_predictions.json</span>
       </div>
     </div>
   );
@@ -581,8 +661,8 @@ export function DatasetExplorerPage() {
 function SummaryStat({ label, value, small }: { label: string; value: string; small?: boolean }) {
   return (
     <div>
-      <p className="text-violet-200 text-xs">{label}</p>
-      <p className={`font-bold text-white ${small ? 'text-sm' : 'text-lg'}`}>{value}</p>
+      <p className="text-[--ink]/50 text-xs">{label}</p>
+      <p className={`font-bold text-[--ink] ${small ? 'text-sm mono' : 'text-lg mono'}`}>{value}</p>
     </div>
   );
 }

@@ -24,6 +24,7 @@ export function DataSourceControls() {
     switchToLiveView,
     liveStatus,
     liveError,
+    liveGpsWarning,
     liveRemainingSec,
     liveDurationSec,
     setLiveDurationSec,
@@ -207,19 +208,21 @@ export function DataSourceControls() {
 
           {/* Start / Stop button pair */}
           {(liveStatus === 'idle' || liveStatus === 'error' || liveStatus === 'done') && (
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               <button
                 onClick={startLiveRecording}
-                className="flex-1 py-4 rounded-xl bg-violet-600 text-white font-bold text-base hover:bg-violet-700 active:scale-95 transition-all cursor-pointer shadow-md hover:shadow-violet-500/20 flex items-center justify-center gap-2"
+                className="flex-1 py-3 rounded-xl bg-[#6D4AFF] text-white font-semibold text-sm hover:bg-[#5a3ae0] active:scale-[0.98] transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2 whitespace-nowrap"
               >
-                <span className="text-lg">▶</span> Start In-Car Recording
+                <span>▶</span>
+                <span>Start Recording</span>
               </button>
               <button
                 disabled
-                className="px-5 py-4 rounded-xl bg-slate-100 text-slate-400 font-semibold text-sm flex items-center gap-2 cursor-not-allowed select-none"
+                className="px-4 py-3 rounded-xl bg-slate-100 text-slate-400 font-semibold text-sm flex items-center justify-center gap-2 cursor-not-allowed select-none whitespace-nowrap"
                 title="Start a recording first"
               >
-                <StopCircle className="w-5 h-5" /> Stop
+                <StopCircle className="w-4 h-4" />
+                <span>Stop</span>
               </button>
             </div>
           )}
@@ -233,18 +236,20 @@ export function DataSourceControls() {
           {liveStatus === 'recording' && (
             <div className="space-y-3">
               {/* Active Start / Stop controls above the HUD */}
-              <div className="flex gap-3">
+              <div className="flex gap-2">
                 <button
                   disabled
-                  className="flex-1 py-3 rounded-xl bg-violet-200 text-violet-400 font-bold text-base cursor-not-allowed select-none flex items-center justify-center gap-2"
+                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-400 font-semibold text-sm cursor-not-allowed select-none flex items-center justify-center gap-2 whitespace-nowrap"
                 >
-                  <span>▶</span> Recording…
+                  <span>▶</span>
+                  <span>Recording…</span>
                 </button>
                 <button
                   onClick={stopLiveRecording}
-                  className="px-6 py-3 rounded-xl bg-red-600 hover:bg-red-700 active:scale-95 text-white font-semibold text-sm flex items-center gap-2 shadow-lg hover:shadow-red-600/30 transition-all cursor-pointer"
+                  className="px-4 py-3 rounded-xl bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer whitespace-nowrap"
                 >
-                  <StopCircle className="w-5 h-5" /> Stop
+                  <StopCircle className="w-4 h-4" />
+                  <span>Stop</span>
                 </button>
               </div>
 
@@ -268,6 +273,16 @@ export function DataSourceControls() {
             <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-xs text-green-800 space-y-1">
               <p className="font-semibold text-green-900">Trip recorded and scored!</p>
               <p>Check the Dashboard and Trip Analysis for detailed telemetry curves.</p>
+            </div>
+          )}
+
+          {liveStatus === 'done' && liveGpsWarning && (
+            <div className="flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3">
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
+              <div>
+                <p className="font-semibold text-amber-900 mb-0.5">No GPS signal — speed data unavailable</p>
+                <p>{liveGpsWarning}</p>
+              </div>
             </div>
           )}
 
