@@ -24,3 +24,6 @@ dist-ssr
 
 .vercel
 .env*
+
+# Local ML research/training folder (raw datasets, videos, notebooks) — not part of the deployed web app
+drivewise-research/

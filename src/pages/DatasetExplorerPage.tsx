@@ -525,7 +525,7 @@ export function DatasetExplorerPage() {
             <MapPin className="w-5 h-5 text-[--signal]" />
             GPS trajectory
           </h3>
-          <span className="text-xs text-[--ink]/40 mono">Latitude vs longitude</span>
+          <span className="text-xs text-violet-400">Street map · real route</span>
         </div>
         {mapData.length > 0 && (
           <div className="h-72">

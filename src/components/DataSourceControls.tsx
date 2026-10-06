@@ -33,6 +33,7 @@ export function DataSourceControls() {
     liveSnapshot,
     csvError,
     csvFileName,
+    samples,
   } = useStore();
 
   const [showPhoneHelp, setShowPhoneHelp] = useState(false);
@@ -55,6 +56,37 @@ export function DataSourceControls() {
     const a = document.createElement('a');
     a.href = url;
     a.download = 'drivewise_sample_telemetry.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const generateLiveTripCsv = () => {
+    const lines = ['time_s,a_long,a_lat,yaw_rate,speed'];
+    for (const s of samples) {
+      lines.push(
+        `${s.time_s.toFixed(2)},${s.a_long.toFixed(3)},${s.a_lat.toFixed(3)},${s.yaw_rate.toFixed(4)},${s.speed.toFixed(2)}`,
+      );
+    }
+    return lines.join('\n');
+  };
+
+  const liveTripCsvFileName = () => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    return `drivewise_live_trip_${yyyy}-${mm}-${dd}_${hh}${min}.csv`;
+  };
+
+  const handleDownloadLiveTrip = () => {
+    const csv = generateLiveTripCsv();
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = liveTripCsvFileName();
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -273,6 +305,12 @@ export function DataSourceControls() {
             <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-xs text-green-800 space-y-1">
               <p className="font-semibold text-green-900">Trip recorded and scored!</p>
               <p>Check the Dashboard and Trip Analysis for detailed telemetry curves.</p>
+              <button
+                onClick={handleDownloadLiveTrip}
+                className="mt-2 text-sm text-green-800 hover:text-green-950 underline cursor-pointer"
+              >
+                Download as CSV
+              </button>
             </div>
           )}
 
