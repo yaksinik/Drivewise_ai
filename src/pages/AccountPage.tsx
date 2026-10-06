@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import {
-  User, Car, Award, Calendar, TrendingUp, History, Download,
+  User, Car, Award, Calendar, TrendingUp, History, Download, Upload,
   Trash2, PlayCircle, FileText, CheckCircle2, ShieldAlert,
 } from 'lucide-react';
 import {
@@ -15,6 +15,7 @@ import {
   getStoredTrips,
   deleteStoredTrip,
   exportAllUserData,
+  importAllUserData,
   type DriverProfile,
   type SavedTripRecord,
 } from '@/services/accountStorage';
@@ -98,6 +99,34 @@ export function AccountPage() {
     URL.revokeObjectURL(url);
   };
 
+  // ---- import (mirror of export) ----
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [importFeedback, setImportFeedback] = useState<{ ok: boolean; message: string } | null>(null);
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = importAllUserData(reader.result as string);
+      if (result.ok) {
+        // Re-read from storage so profile + trips refresh on screen
+        setProfile(getStoredDriverProfile());
+        setTrips(getStoredTrips());
+        const tripMsg =
+          result.skippedTrips > 0
+            ? `${result.importedTrips} trips imported (${result.skippedTrips} already existed, updated)`
+            : `${result.importedTrips} trips imported`;
+        setImportFeedback({ ok: true, message: `Import successful — ${tripMsg}.` });
+      } else {
+        setImportFeedback({ ok: false, message: result.error ?? 'Import failed.' });
+      }
+    };
+    reader.readAsText(file);
+    // allow re-selecting the same file later
+    e.target.value = '';
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
@@ -119,7 +148,40 @@ export function AccountPage() {
             <Download className="w-3.5 h-3.5" />
             <span>Export Longitudinal JSON</span>
           </button>
+
+          <button
+            onClick={() => importInputRef.current?.click()}
+            className="btn-secondary"
+            title="Import a longitudinal JSON exported from another device"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            <span>Import JSON</span>
+          </button>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".json,application/json"
+            onChange={handleImportFile}
+            className="hidden"
+          />
         </div>
+
+        {importFeedback && (
+          <div
+            className={`mt-3 flex items-start gap-2 text-sm rounded-xl p-3 ${
+              importFeedback.ok
+                ? 'text-green-800 bg-green-50 border border-green-200'
+                : 'text-orange-700 bg-orange-50 border border-orange-200'
+            }`}
+          >
+            {importFeedback.ok ? (
+              <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
+            ) : (
+              <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0" />
+            )}
+            <span>{importFeedback.message}</span>
+          </div>
+        )}
       </PageHeader>
 
       {/* Driver Profile Card */}

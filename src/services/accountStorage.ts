@@ -115,3 +115,100 @@ export function exportAllUserData(): string {
   };
   return JSON.stringify(data, null, 2);
 }
+
+export interface ImportResult {
+  ok: boolean;
+  error?: string;
+  importedTrips: number;
+  skippedTrips: number;
+  importedProfile: boolean;
+}
+
+/**
+ * Import a previously exported longitudinal JSON (from exportAllUserData).
+ * Merges profile + trips into this browser's localStorage:
+ * - profile is overwritten with the imported one
+ * - trips are merged by id (imported copy wins on conflict, no duplicates)
+ */
+export function importAllUserData(json: string): ImportResult {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    return {
+      ok: false,
+      error: 'This file is not valid JSON. Please choose the file downloaded from "Export Longitudinal JSON".',
+      importedTrips: 0,
+      skippedTrips: 0,
+      importedProfile: false,
+    };
+  }
+
+  const data = parsed as { profile?: unknown; trips?: unknown };
+
+  if (!data || typeof data !== 'object' || !data.profile || !Array.isArray(data.trips)) {
+    return {
+      ok: false,
+      error:
+        'This does not look like a DriveWise export — it is missing the "profile"/"trips" fields. Please use the file from Account → "Export Longitudinal JSON".',
+      importedTrips: 0,
+      skippedTrips: 0,
+      importedProfile: false,
+    };
+  }
+
+  // Validate trip records: must have an id and raw samples to be usable.
+  const validTrips = (data.trips as SavedTripRecord[]).filter(
+    (t) => t && typeof t === 'object' && typeof t.id === 'string' && Array.isArray(t.samples),
+  );
+  if (validTrips.length === 0 && (data.trips as unknown[]).length > 0) {
+    return {
+      ok: false,
+      error:
+        'This file contains trips but none have the required sensor samples (a report/summary JSON is not enough — use the Account export).',
+      importedTrips: 0,
+      skippedTrips: 0,
+      importedProfile: false,
+    };
+  }
+
+  // Merge trips by id — imported copy wins, no duplicates.
+  const existing = getStoredTrips();
+  const byId = new Map<string, SavedTripRecord>();
+  for (const t of existing) byId.set(t.id, t);
+  let skipped = 0;
+  for (const t of validTrips) {
+    if (byId.has(t.id)) skipped++;
+    byId.set(t.id, t);
+  }
+  const merged = [...byId.values()].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+  );
+
+  try {
+    localStorage.setItem(TRIPS_KEY, JSON.stringify(merged));
+
+    let importedProfile = false;
+    const importedProfileData = data.profile as DriverProfile;
+    if (typeof importedProfileData === 'object' && importedProfileData && importedProfileData.id) {
+      saveDriverProfile(importedProfileData);
+      importedProfile = true;
+    }
+
+    return {
+      ok: true,
+      importedTrips: validTrips.length,
+      skippedTrips: skipped,
+      importedProfile,
+    };
+  } catch (err) {
+    console.error('Failed to import data:', err);
+    return {
+      ok: false,
+      error: 'Could not save the imported data — browser storage may be full.',
+      importedTrips: 0,
+      skippedTrips: 0,
+      importedProfile: false,
+    };
+  }
+}
