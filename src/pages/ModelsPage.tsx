@@ -111,19 +111,7 @@ export function ModelsPage() {
         subtitle="What's built, what's tested in notebooks, and what's planned"
       />
 
-      <Card className="mb-6 bg-orange-50 border-orange-200">
-        <div className="flex items-start gap-3">
-          <AlertTriangle />
-          <div>
-            <h3 className="font-semibold text-orange-900">Validation status</h3>
-            <p className="text-sm text-orange-700 mt-1">
-              Not yet validated against real driver ratings. All scoring in this prototype uses
-              heuristic thresholds that are example values — they need literature checks and
-              real-world calibration before use outside this research context.
-            </p>
-          </div>
-        </div>
-      </Card>
+
 
       <Card>
         <div className="flex items-center gap-2 mb-4">

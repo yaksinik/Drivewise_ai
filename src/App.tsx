@@ -14,7 +14,7 @@ function App() {
   const [page, setPage] = useState<PageId>('dashboard');
 
   return (
-    <StoreProvider>
+    <StoreProvider onNavigate={setPage}>
       <Layout currentPage={page} onPageChange={setPage}>
         {page === 'dashboard' && <DashboardPage />}
         {page === 'trip' && <TripAnalysisPage />}

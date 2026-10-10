@@ -290,6 +290,7 @@ export function DataSourceControls() {
                 remainingSec={liveRemainingSec}
                 durationSec={liveDurationSec}
                 onStop={stopLiveRecording}
+                isRecording={liveStatus === 'recording'}
               />
             </div>
           )}

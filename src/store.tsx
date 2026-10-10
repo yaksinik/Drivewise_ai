@@ -56,7 +56,11 @@ interface StoreValue {
   liveSnapshot: LiveTelemetrySnapshot | null;
   saveCurrentTripToAccount: (title?: string, notes?: string, tags?: string[]) => SavedTripRecord | null;
   loadSavedTrip: (trip: SavedTripRecord) => void;
+  // navigation
+  navigate: (page: PageId) => void;
 }
+
+type PageId = 'dashboard' | 'trip' | 'history' | 'instructor' | 'assumptions' | 'dataset' | 'models' | 'roadmap';
 
 const StoreContext = createContext<StoreValue | null>(null);
 
@@ -82,7 +86,7 @@ function applyProfileMultipliers(profileId: string, skills: SkillSpec[]): SkillS
   }));
 }
 
-export function StoreProvider({ children }: { children: ReactNode }) {
+export function StoreProvider({ children, onNavigate }: { children: ReactNode; onNavigate?: (page: PageId) => void }) {
   // ---- core state ----
   const [dataSource, setDataSource] = useState<DataSource>('simulator');
   const [simulatorParams, setSimulatorParams] = useState<SimulatorParams>(DEFAULT_SIM_PARAMS);
@@ -105,6 +109,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [liveSnapshot, setLiveSnapshot] = useState<LiveTelemetrySnapshot | null>(null);
   const liveRecorderRef = useRef<LiveRecorder | null>(null);
   const liveTimerRef = useRef<number | null>(null);
+
+  // ---- navigation ----
+  const navigate = useCallback((page: PageId) => {
+    onNavigate?.(page);
+  }, [onNavigate]);
 
   // ---- derived data ----
   const samples: TelemetrySample[] = useMemo(() => {
@@ -197,7 +206,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setDataSource('live');
     setLiveStatus('done');
     setLiveSnapshot(null);
-  }, []);
+
+    // Exit fullscreen and navigate to Dashboard after scoring completes
+    try {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+    } catch {}
+    navigate('dashboard');
+  }, [navigate]);
 
   const startLiveRecording = useCallback(async () => {
     setLiveError(null);
@@ -354,6 +371,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     liveSnapshot,
     saveCurrentTripToAccount,
     loadSavedTrip,
+    navigate,
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
@@ -365,4 +383,5 @@ export function useStore(): StoreValue {
   return ctx;
 }
 
+export type { PageId };
 export { SAMPLE_RATE };

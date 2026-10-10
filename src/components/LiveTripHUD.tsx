@@ -1,17 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Gauge, Navigation, Compass, AlertCircle, StopCircle, Radio, Maximize2, Minimize2 } from 'lucide-react';
 import type { LiveTelemetrySnapshot } from '@/engine/liveCapture';
+import { LiveFollowMap } from './LiveFollowMap';
 
 interface LiveTripHUDProps {
   snapshot: LiveTelemetrySnapshot | null;
   remainingSec: number;
   durationSec: number;
   onStop: () => void;
+  isRecording: boolean;
 }
 
-export function LiveTripHUD({ snapshot, remainingSec, durationSec, onStop }: LiveTripHUDProps) {
+export function LiveTripHUD({ snapshot, remainingSec, durationSec, onStop, isRecording }: LiveTripHUDProps) {
   const [unit, setUnit] = useState<'kmh' | 'mph'>('kmh');
   const [fullscreen, setFullscreen] = useState(false);
+
+  // Request fullscreen when recording starts (component mounts during recording)
+  useEffect(() => {
+    if (isRecording && !document.fullscreenElement) {
+      try {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } catch {}
+    }
+  }, [isRecording]);
 
   const speed = snapshot ? (unit === 'kmh' ? snapshot.speed_kmh : snapshot.speed_mph) : 0;
   const gLong = snapshot ? snapshot.g_long : 0;
@@ -160,6 +171,14 @@ export function LiveTripHUD({ snapshot, remainingSec, durationSec, onStop }: Liv
           )}
         </div>
       </div>
+
+      {/* Live Follow Map — only while recording and GPS fix available */}
+      {isRecording && snapshot?.latitude !== null && snapshot?.longitude !== null && (
+        <div className="border-t border-slate-800 pt-4">
+          <div className="text-[10px] text-slate-400 tracking-widest font-semibold mb-2">LIVE MAP</div>
+          <LiveFollowMap lat={snapshot.latitude} lon={snapshot.longitude} />
+        </div>
+      )}
 
       {/* Footer */}
       <div className="mt-5 pt-3 border-t border-slate-800 flex items-center gap-2 text-[10px] text-slate-500">

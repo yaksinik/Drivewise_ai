@@ -31,6 +31,9 @@ export interface LiveTelemetrySnapshot {
   gpsFix: boolean;
   heading: number | null; // degrees from north
   sampleCount: number;
+  // Live GPS position for follow-map
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface PermissionResult {
@@ -174,6 +177,8 @@ export class LiveRecorder {
         gpsFix: Boolean(latestGps && latestGps.accuracy_m < 50),
         heading: latestGps ? latestGps.heading_deg : null,
         sampleCount: this.rawMotion.length,
+        latitude: latestGps ? latestGps.latitude : null,
+        longitude: latestGps ? latestGps.longitude : null,
       });
     }
   };

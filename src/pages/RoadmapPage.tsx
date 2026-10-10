@@ -83,22 +83,6 @@ export function RoadmapPage() {
           );
         })}
       </div>
-
-      <Card className="mt-6 bg-amber-50 border-amber-200">
-        <div className="flex items-start gap-3">
-          <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-          <div>
-            <h3 className="font-semibold text-amber-900">Research Paper Readiness</h3>
-            <p className="text-sm text-amber-800 mt-1">
-              The scoring engine, DSP pipeline, and PDF report export are fully implemented.
-              Live phone sensors, the instructor validation study UI, and the user account
-              infrastructure are built — but <strong>no real data has been collected yet</strong>.
-              Instructor ratings, user account histories, and live sensor sessions are all
-              Stage 2 data-collection milestones.
-            </p>
-          </div>
-        </div>
-      </Card>
     </div>
   );
 }
